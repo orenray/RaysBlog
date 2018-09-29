@@ -1,0 +1,188 @@
+﻿@model (string typeId, string action, dynamic entry)
+<script src="~/layui/layui.js"></script>
+<link href="~/layui/css/layui.css" rel="stylesheet" />
+<script>
+    layui.use(['layedit', 'form'], function () {
+        var layedit = layui.layedit;
+        var index = layedit.build('body'); //建立编辑器
+        var $ = layui.jquery;
+        var form = layui.form;
+        //自定义验证规则
+        form.verify({
+            article_body: function (value) {
+                layedit.sync(index);
+            }
+        });
+
+    });
+</script>
+<div id="typeid_1" class="layui-card">
+    <div class="layui-card-header">添加</div>
+    <div class="layui-card-body">
+        <form class="layui-form" action="">
+            <div class="layui-row">
+                <div class="layui-form-item">
+                    @{
+                        if (Model.action == "1")
+                        {
+                            switch (Model.typeId)
+                            {
+                                case "1":
+                                    <input type="hidden" name="CategoryId" value="@Model.entry.CategoryId">
+                                    <label class="layui-form-label">分类标题</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" name="CategoryName" value="@Model.entry.CategoryName" class="layui-input">
+                                    </div>
+                                    break;
+                                case "2":
+                                    <input type="hidden" name="ArticleId" value="@Model.entry.Item1.ArticleId">
+                                    <label class="layui-form-label">文章标题</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" name="ArticleName" value="@Model.entry.Item1.ArticleName" class="layui-input">
+                                    </div>
+                                    <label class="layui-form-label">文章分类</label>
+                                    <div class="layui-input-block">
+                                        <select name="CategoryId">
+                                            @{
+                                                foreach (var category in Model.entry.Item2)
+                                                {
+                                                    if (category.CategoryId == Model.entry.Item1.Category.CategoryId)
+                                                    {
+                                                        <option selected="selected" value="@category.CategoryId">@category.CategoryName</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="@category.CategoryId">@category.CategoryName</option>
+                                                    }
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                    <label class="layui-form-label">文章标签</label>
+                                    <div class="layui-input-block">
+                                        @{
+                                            var tagStr = "";
+                                            var tagId = "";
+                                            if (Model.entry.Item1.Tag != null)
+                                            {
+                                                if (!string.IsNullOrEmpty(Model.entry.Item1.Tag.TagName))
+                                                {
+                                                    tagStr = Model.entry.Item1.Tag.TagName;
+                                                    tagId = Model.entry.Item1.Tag.TagId.ToString();
+                                                }
+                                            }
+                                            <input type="text" lay-verify="tag" id="tag" name="TagName" value="@tagStr" class="layui-input">
+                                            <input type="hidden" lay-verify="tagId" id="tagId" name="TagId" value="@tagId" />
+                                        }
+                                    </div>
+                                    <label class="layui-form-label">文章内容</label>
+                                    <div class="layui-input-block">
+                                        <textarea id="body" name="body" style="display: none;" lay-verify="article_body">@Model.entry.Item1.Body</textarea>
+                                    </div>
+                                    <label class="layui-form-label">文章备注</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" name="remark" value="@Model.entry.Item1.Remark" class="layui-input">
+                                    </div>
+                                    break;
+                            }
+                        }
+                        if (Model.action == "0")
+                        {
+                            switch (Model.typeId)
+                            {
+                                case "1":
+                                    <div class="layui-input-block">
+                                        <input type="text" name="CategoryName" required lay-verify="required" placeholder="请输入标题" autocomplete="off" class="layui-input">
+                                    </div>
+                                    break;
+                                case "2":
+                                    <div class="layui-input-block">
+                                        <input type="text" name="ArticleName" required lay-verify="required" placeholder="请输入标题" autocomplete="off" class="layui-input">
+                                    </div>
+                                    <label class="layui-form-label">文章分类</label>
+                                    <div class="layui-input-block">
+                                        <select name="CategoryId" required lay-verify="required">
+                                            <option value="">请选择分类</option>
+                                            @{
+                                                foreach (var category in Model.entry.Item2)
+                                                {
+                                                      <option value="@category.CategoryId">@category.CategoryName</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                    <label class="layui-form-label">文章标签</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" lay-verify="tag" placeholder="请输入标签,用;号分割" name="TagName"  class="layui-input">
+                                    </div>
+                                    <label class="layui-form-label">文章内容</label>
+                                    <div class="layui-input-block">
+                                        <textarea id="body" name="body" style="display: none;" lay-verify="article_body"></textarea>
+                                    </div>
+                                    <label class="layui-form-label">文章备注</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" name="remark"  placeholder="请输入备注" class="layui-input">
+                                    </div>
+                                    break;
+                            }
+                        }
+                    }
+                </div>
+                <input type="hidden" name="typeId" value="@Model.typeId" />
+                <input type="hidden" name="action" value="@Model.action" />
+                <div class="layui-form-item">
+                    <div class="layui-input-block">
+                        <button class="layui-btn" lay-submit lay-filter="add">立即提交</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+
+    //Demo
+    var $ = null;
+    layui.use(['form'], function () {
+        var form = layui.form;
+        var layer = layui.layer;
+        $ = layui.jquery;
+        //监听提交
+        form.on('submit(add)', function (data) {
+            var d = data.field;
+            var dateForm = $('form').serialize();
+            //var dataObj = $('form').serializeArray();
+            //var dataJson = JSON.stringify(dataObj);          
+            var retData = setData(layer, "/ray/item/add", dateForm);
+            //layer.msg(JSON.stringify(data.field));
+            return retData;
+        });
+
+
+    });
+    function setData(layer, url, params) {
+        var retData = {};
+        params = (params == null || params == "" || typeof (params) == "undefined") ? {} : params;
+        $.post(url, params, function (data) {
+            retData = data;
+            if (retData.code == 2 || retData.code == 1) {
+                if (retData.msg != "undefined" || msgparams != null || retData.msg == "") {
+                    layer.msg(retData.msg, { icon: 5 });
+                    return false;
+                }
+            }
+            if (retData.code == 0) {
+                layer.msg(retData.msg, {
+                    icon: 6,
+                    time: 500
+                }, function () {
+                    parent.location.reload(true);;
+                    //parent.location.href = "/ray/item/?id="+retData.tid;
+                });
+            }
+        });
+        return false;
+    };
+</script>
+

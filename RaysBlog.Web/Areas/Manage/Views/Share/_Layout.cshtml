@@ -1,0 +1,62 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>@ViewData["titile"] 后台管理</title>
+    <link rel="stylesheet" href="~/layui/css/layui.css" media="all" />
+    <link rel="stylesheet" href="~/css/font-awesome/css/font-awesome.min.css" media="all" />
+    <link rel="stylesheet" href="~/src/css/app.css" media="all" />
+    <link rel="stylesheet" href="~/src/css/themes/default.css" media="all" id="skin" kit-skin />
+    <script src="~/layui/layui.js"></script>
+</head>
+<body class="kit-theme">
+    <div class="layui-layout layui-layout-admin kit-layout-admin">
+        @RenderSection("header",false)
+        @RenderSection("left",false)
+        @RenderBody()
+        @RenderSection("footer",false)   
+    </div>
+    <script>
+        var message;
+        layui.config({
+            base: '/src/js/',
+            version: '1.0.1'
+        }).use(['app', 'message'], function () {
+            var app = layui.app,
+                $ = layui.jquery,
+                layer = layui.layer;
+            //将message设置为全局以便子页面调用
+            message = layui.message;
+            //主入口
+            app.set({
+                type: 'iframe'
+            }).init();
+            $('dl.skin > dd').on('click', function () {
+                var $that = $(this);
+                var skin = $that.children('a').data('skin');
+                switchSkin(skin);
+            });
+            var setSkin = function (value) {
+                layui.data('kit_skin', {
+                    key: 'skin',
+                    value: value
+                });
+            };
+            getSkinName = function () {
+                return layui.data('kit_skin').skin;
+            };
+            switchSkin = function (value) {
+                var _target = $('link[kit-skin]')[0];
+                _target.href = _target.href.substring(0, _target.href.lastIndexOf('/') + 1) + value + _target.href.substring(_target.href.lastIndexOf('.'));
+                setSkin(value);
+
+            };
+            initSkin = function () {
+                var skin = getSkinName();
+                switchSkin(skin === undefined ? 'default' : skin);
+            }();
+        });
+    </script>
+</body>
+</html>

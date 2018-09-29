@@ -1,0 +1,80 @@
+@{
+    Layout = null;
+}
+<script src="~/layui/layui.js"></script>
+<link href="~/layui/css/layui.css" rel="stylesheet" />
+
+<div style="padding:10px">
+    <div class="layui-inline">
+        <div class="layui-input-inline">
+            <a href="~/Admin/Article/Add" class="layui-btn layui-btn-sm">
+                <i class="layui-icon">&#xe654;</i>添加
+            </a>
+        </div>
+        <div class="layui-input-inline">
+            <input type="text" id="search_key" placeholder="标题关键字" class="layui-input" />
+        </div>
+        <div class="layui-input-inline">
+            发布时间:
+        </div>
+        <div class="layui-input-inline">
+            <input type="text" id="search_start" placeholder="开始时间" class="layui-input " onclick="pickDate('#search_start')" />
+        </div>
+        <div class="layui-input-inline">
+            ——
+        </div>
+        <div class="layui-input-inline">
+            <input type="text" id="search_end" placeholder="结束时间" class="layui-input" onclick="pickDate('#search_end')" />
+        </div>
+        <div class="layui-input-inline">
+            <button class="layui-btn layui-btn-sm" onclick="search()">
+                <i class="layui-icon">&#xe615;</i>查询
+            </button>
+        </div>
+        
+    </div>
+</div>
+<table class="layui-hide" id="test" lay-filter="test"></table>
+@*<script id="isEnabledTpl">
+    { { # if (d.isEnabled) { return "是" } } }
+    { { # else { return "否" } } }
+</script>*@
+
+<script>
+    layui.use('table', function () {
+        var table = layui.table;
+        var $ = layui.jquery;
+        $.post("/ray/item/", { id:@ViewBag.TypeId, aaa:"abc" }, function (colsarr) {
+            var a = colsarr;
+            table.render({
+                elem: '#test'
+                , url: '/ray/item/list'
+                , method: 'post'
+                , height: 'full-200'
+                , where: { id: 1, pageIndex: 1, ascending: true }
+                , cols: [colsarr]
+                //, page: true
+                , parseData: function (res) { //将原始数据解析成 table 组件所规定的数据
+                    return {
+                        "code": res.code, //解析接口状态
+                        "msg": res.msg, //解析提示文本
+                        "count": res.count, //解析数据长度
+                        "data": res.data //解析数据列表
+                    };
+                },
+                done: function (res, curr, count) {
+                    var r = res;
+                },
+                page: {
+                    layout: ['count', 'prev','page' ,'next'],
+                    groups:4
+                }
+            });
+        },"json");
+
+    });
+</script>
+<script type="text/html"  id="toolBar">
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
