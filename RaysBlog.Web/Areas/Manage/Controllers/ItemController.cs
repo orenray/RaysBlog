@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using AutoMapper;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using RaysBlog.Repository;
 using RaysBlog.Web.Models.DTO;
@@ -17,8 +18,10 @@ namespace RaysBlog.Web.Areas.Manage.Controllers
     {
         private readonly CategoryRepository _categoryService;
         private readonly ArticleRepository _articleService;
-        public ItemController()
+        private readonly IHostingEnvironment hostingEnvironment;
+        public ItemController(IHostingEnvironment hostingEnvironment )
         {
+            this.hostingEnvironment = hostingEnvironment;
             _categoryService= new CategoryRepository();
             _articleService = new ArticleRepository();
         }
@@ -276,6 +279,52 @@ namespace RaysBlog.Web.Areas.Manage.Controllers
                     break;
             }
             return Json(obj);
+        }
+
+        [Route("ImgUp")]
+        [HttpPost]
+        public IActionResult Upload()//问题，需要处理上传图片后，不提交时，应删除之前上传图片的问题
+        {
+            var imgFile = Request.Form.Files[0];
+            if(imgFile==null||string.IsNullOrEmpty(imgFile.FileName)) return Json(new { code = 1, msg = "上传失败", });
+            long size = imgFile.Length;
+            var fileName = imgFile.FileName;//文件名
+            var extName = fileName.Substring(fileName.LastIndexOf("."), fileName.Length - fileName.LastIndexOf("."));//扩展名
+            var fileName1 = Guid.NewGuid().ToString().Replace("-", "");
+            fileName1 = fileName1 + "_" + fileName;
+            string dirDate = DateTime.Now.ToString("yyyyMMdd");
+            string dir1 = hostingEnvironment.WebRootPath + $@"\upload\{dirDate}";
+            try
+            {
+                if (!System.IO.Directory.Exists(dir1))
+                {
+                    System.IO.Directory.CreateDirectory(dir1);
+                }
+                fileName = dir1 + $@"\{fileName1}";//上传后的文件全路径
+                using (var fs = System.IO.File.Create(fileName))
+                {
+                    imgFile.CopyTo(fs);
+                    fs.Flush();
+                }
+                var result = new
+                {
+                    code = 0,
+                    msg = "上传成功",
+                    data = new { src = $"/upload/{dirDate}/{fileName1}", title = "图片标题" }
+                };
+                return Json(result);
+            }
+            catch (Exception)
+            {
+                var result = new
+                {
+                    code = -1,
+                    msg = "上传失败",
+                    data = new { src = $"/upload/error.gif", title = "错误" }
+                };
+                return Json(result);
+            }           
+            
         }
     }
 }

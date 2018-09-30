@@ -2,19 +2,19 @@
 <script src="~/layui/layui.js"></script>
 <link href="~/layui/css/layui.css" rel="stylesheet" />
 <script>
-    layui.use(['layedit', 'form'], function () {
-        var layedit = layui.layedit;
-        var index = layedit.build('body'); //建立编辑器
-        var $ = layui.jquery;
-        var form = layui.form;
-        //自定义验证规则
-        form.verify({
-            article_body: function (value) {
-                layedit.sync(index);
-            }
-        });
+    //layui.use(['layedit', 'form'], function () {
+    //    var layedit = layui.layedit;
+    //    var index = layedit.build('body'); //建立编辑器
+    //    var $ = layui.jquery;
+    //    var form = layui.form;
+    //    //自定义验证规则
+    //    form.verify({
+    //        article_body: function (value) {
+    //            layedit.sync(index);
+    //        }
+    //    });
 
-    });
+    //});
 </script>
 <div id="typeid_1" class="layui-card">
     <div class="layui-card-header">添加</div>
@@ -144,10 +144,24 @@
 
     //Demo
     var $ = null;
-    layui.use(['form'], function () {
+    layui.use(['layedit', 'form'], function () {
+        $ = layui.jquery;
         var form = layui.form;
         var layer = layui.layer;
-        $ = layui.jquery;
+        var layedit = layui.layedit;
+        layedit.set({
+            uploadImage: {
+                url: '/ray/item/ImgUp'
+                , type: 'post' //默认post
+            }
+        });
+        var index = layedit.build('body'); //建立编辑器
+        //自定义验证规则
+        form.verify({
+            article_body: function (value) {
+                layedit.sync(index);
+            }
+        });
         //监听提交
         form.on('submit(add)', function (data) {
             var d = data.field;

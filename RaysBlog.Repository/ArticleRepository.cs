@@ -432,19 +432,35 @@ namespace RaysBlog.Repository
                         {
                             if (GetExistCount("select count(*) from blogtag where Arid=@arId",new { arId=blogArticle.ArticleId})>0)
                             {
-                                conn.Execute("delete from blogTag where ArId=@arId;");
+                               var tgNum= conn.Execute("delete from blogTag where ArId=@artId;",new { artId=blogArticle.ArticleId},tran);
+                                if (tgNum<=0)
+                                {
+                                    tran.Rollback();
+                                    return (false, "标签删除失败，回滚");
+                                }
                             }
-                        
-                           var result= conn.QueryMultiple("delete from blogTag where ArId=@arId;delete from blogArticle where articleId=@arId", new { arId = blogArticle.ArticleId }, tran);
-                            if (result.Read<int>().ToList().Where(t=>t>0).Count()==2)
+
+                            //var result= conn.QueryMultiple("delete from blogTag where ArId=@arId;delete from blogArticle where articleId=@arId", new { arId = blogArticle.ArticleId }, tran);
+                            // if (result.Read<int>().ToList().Where(t=>t>0).Count()==2)
+                            // {
+                            //     tran.Commit();
+                            //     return (true, "删除成功" );
+                            // }
+                            // else
+                            // {
+                            //     tran.Rollback();
+                            //     return (false,"删除失败");
+                            // }
+                            var result = conn.Execute("delete from blogArticle where articleId=@arId", new { arId = blogArticle.ArticleId }, tran);
+                            if (result>0)
                             {
                                 tran.Commit();
-                                return (true, "删除成功" );
+                                return (true, "删除成功");
                             }
                             else
                             {
                                 tran.Rollback();
-                                return (false,"删除失败");
+                                return (false, "删除失败");
                             }
                         }
                         else
@@ -465,7 +481,7 @@ namespace RaysBlog.Repository
                     catch (Exception ex)
                     {
                         tran.Rollback();
-                        return (true, ex.Message);
+                        return (false, ex.Message);
                     }
                     
                 }
@@ -492,14 +508,29 @@ namespace RaysBlog.Repository
                         {
                             if (GetExistCount("select count(*) from blogtag where Arid=@arId", new { arId = blogArticle.ArticleId }) > 0)
                             {
-                                conn.Execute("delete from blogTag where ArId=@arId;");
+                                var tgNum =await conn.ExecuteAsync("delete from blogTag where ArId=@arId;", new { arId = blogArticle.ArticleId });
+                                if (tgNum <= 0)
+                                {
+                                    return (true, "标签删除失败，回滚");
+                                }
                             }
 
-                            var result =await conn.QueryMultipleAsync("delete from blogTag where ArId=@arId;delete from blogArticle where articleId=@arId", new { arId = blogArticle.ArticleId }, tran);
-                            if (result.Read<int>().ToList().Where(t => t > 0).Count() == 2)
+                            //var result =await conn.QueryMultipleAsync("delete from blogTag where ArId=@arId;delete from blogArticle where articleId=@arId", new { arId = blogArticle.ArticleId }, tran);
+                            //if (result.Read<int>().ToList().Where(t => t > 0).Count() == 2)
+                            //{
+                            //    tran.Commit();
+                            //    return (true,"删除成功");
+                            //}
+                            //else
+                            //{
+                            //    tran.Rollback();
+                            //    return (false, "删除失败");
+                            //}
+                            var result =await conn.ExecuteAsync("delete from blogArticle where articleId=@arId", new { arId = blogArticle.ArticleId }, tran);
+                            if (result > 0)
                             {
                                 tran.Commit();
-                                return (true,"删除成功");
+                                return (true, "删除成功");
                             }
                             else
                             {
@@ -525,7 +556,7 @@ namespace RaysBlog.Repository
                     catch (Exception ex)
                     {
                         tran.Rollback();
-                        return (true, ex.Message);
+                        return (false, ex.Message);
                     }
 
                 }
