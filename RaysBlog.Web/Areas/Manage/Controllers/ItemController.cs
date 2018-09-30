@@ -33,8 +33,18 @@ namespace RaysBlog.Web.Areas.Manage.Controllers
         {
             ViewBag.TypeId = id;
             ViewBag.PageIndex = pageIndex;
+            string vcName= "";   
+            switch (id)
+	        {
+		        case "1":
+                    vcName="Category";
+                break;
+                case "2":
+                    vcName="Article";
+                 break;
+	        }
 
-            return ViewComponent("Category", new { id, pageIndex, ascending });
+            return ViewComponent(vcName, new { id, pageIndex, ascending });
         }
 
         [Route("update")]
