@@ -33,8 +33,18 @@ namespace RaysBlog.Web.Areas.Manage.Controllers
         {
             ViewBag.TypeId = id;
             ViewBag.PageIndex = pageIndex;
+            string vcName= "";   
+            switch (id)
+	        {
+		        case "1":
+                    vcName="Category";
+                break;
+                case "2":
+                    vcName="Article";
+                 break;
+	        }
 
-            return ViewComponent("Category", new { id, pageIndex, ascending });
+            return ViewComponent(vcName, new { id, pageIndex, ascending });
         }
 
         [Route("update")]
@@ -142,7 +152,7 @@ namespace RaysBlog.Web.Areas.Manage.Controllers
                     var tagidStr = Request.Form["TagId"].ToString();
                     var body = Request.Form["body"].ToString();
                     var remark = Request.Form["remark"].ToString();
-                    if (!string.IsNullOrEmpty(artName) && !string.IsNullOrEmpty(body) && !string.IsNullOrEmpty(artName) && !string.IsNullOrEmpty(remark))
+                    if (!string.IsNullOrEmpty(artName) && !string.IsNullOrEmpty(body) && !string.IsNullOrEmpty(artName))
                     {
                         if (!string.IsNullOrEmpty(action))
                         {
