@@ -331,7 +331,7 @@ namespace RaysBlog.Repository
                     try
                     {
                         var currentId = GetMaxId()+1;
-                        var articleNum= conn.Execute("insert into blogArticle(ArticleId,CaId,Body,PostDate,Remark,ArticleName,IsPublished) values(@articleId,@caid,@body,@postDate,@remark,@articleName,@isPublished)", new {articleId= currentId, caid=blogArticle.Category.CategoryId,body=blogArticle.Body,postDate=blogArticle.PostDate,remark=blogArticle.Remark,articleName=blogArticle.ArticleName,isPublished=blogArticle.IsPublished }, tran);
+                        var articleNum= conn.Execute("set IDENTITY_INSERT blogArticle  on;insert into blogArticle(ArticleId,CaId,Body,PostDate,Remark,ArticleName,IsPublished) values(@articleId,@caid,@body,@postDate,@remark,@articleName,@isPublished);set IDENTITY_INSERT blogArticle  off", new {articleId= currentId, caid=blogArticle.Category.CategoryId,body=blogArticle.Body,postDate=blogArticle.PostDate,remark=blogArticle.Remark,articleName=blogArticle.ArticleName,isPublished=blogArticle.IsPublished }, tran);
                         if (blogArticle.Tag != null&&GetExistCount("select count(*) from BlogTag where TagName like @atnames and ArId=@articleId", new { articleId = blogArticle.ArticleId, atnames = $"%{blogArticle.Tag.TagName}%" })<=0)
                         { 
                             var tagNum = conn.Execute("insert into blogTag(ArId,TagName) values(@arID,@tagName)", new {arID= currentId, tagName=blogArticle.Tag.TagName }, tran);

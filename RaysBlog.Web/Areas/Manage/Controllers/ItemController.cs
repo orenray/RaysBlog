@@ -152,7 +152,7 @@ namespace RaysBlog.Web.Areas.Manage.Controllers
                     var tagidStr = Request.Form["TagId"].ToString();
                     var body = Request.Form["body"].ToString();
                     var remark = Request.Form["remark"].ToString();
-                    if (!string.IsNullOrEmpty(artName) && !string.IsNullOrEmpty(body) && !string.IsNullOrEmpty(artName) && !string.IsNullOrEmpty(remark))
+                    if (!string.IsNullOrEmpty(artName) && !string.IsNullOrEmpty(body) && !string.IsNullOrEmpty(artName))
                     {
                         if (!string.IsNullOrEmpty(action))
                         {
