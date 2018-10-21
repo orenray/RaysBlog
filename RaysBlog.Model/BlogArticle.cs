@@ -13,5 +13,8 @@ namespace RaysBlog.Model
         public string Remark { get; set; }
         public string ArticleName { get; set; }
         public bool IsPublished { get; set; }
+        public string TitleImgPath { get; set; }
+        public int ViewNum { get; set; }
+        public int CommentNum { get; set; }
     }
 }

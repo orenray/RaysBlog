@@ -34,48 +34,52 @@ namespace RaysBlog.Repository
         }
         public int GetTotalCount()
         {
-            return GetExistCount("select count(*) from BlogCategory", null);
+            return GetExistCount("select count(*) from blogcategory", null);
         }
         public BlogCategory Get(int id)
         {
             using (var conn=ConnectionFactory.GetOpenConnection())
             {
-               return conn.QueryFirstOrDefault<BlogCategory>("select * from blogCategory where categoryId=@caId",new {caId=id });
+               return conn.QueryFirstOrDefault<BlogCategory>("select * from blogcategory where categoryId=@caId",new {caId=id });
             }
         }
         public async Task<BlogCategory> GetAsync(int id)
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                return await conn.QueryFirstOrDefaultAsync<BlogCategory>("select * from blogCategory where categoryId=@caId", new { caId = id });
+                return await conn.QueryFirstOrDefaultAsync<BlogCategory>("select * from blogcategory where categoryId=@caId", new { caId = id });
             }
         }
         public IEnumerable<BlogCategory> GetCategorys()
         {
             using (var conn=ConnectionFactory.GetOpenConnection())
             {
-               return conn.Query<BlogCategory>("select * from BlogCategory order by categoryId");
+               return conn.Query<BlogCategory>("select * from blogcategory order by categoryId");
             }
         }
         public async Task<IEnumerable<BlogCategory>> GetCategorysAsync()
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                return await conn.QueryAsync<BlogCategory>("select * from BlogCategory order by categoryId");
+                return await conn.QueryAsync<BlogCategory>("select * from blogcategory order by categoryId");
             }
         }
         public IEnumerable<BlogCategory> GetPager(int pageIndex,int pageSize)
         {
             using (var conn=ConnectionFactory.GetOpenConnection())
             {
-               return conn.Query<BlogCategory>(@"SELECT top(@PageSize) paged.categoryId,paged.CategoryName FROM (SELECT row_number() over(ORDER BY categoryId) AS [No],* FROM blogcategory ) AS paged WHERE paged.[No]>(@PageIndex-1)*@PageSize",new { PageIndex=pageIndex,PageSize=pageSize});
+                //var sql = @"SELECT top(@PageSize) paged.categoryId,paged.CategoryName FROM (SELECT row_number() over(ORDER BY categoryId) AS [No],* FROM blogcategory ) AS paged WHERE paged.[No]>(@PageIndex-1)*@PageSize";
+                var mysql = @"SELECT * FROM blogcategory order by categoryId LIMIT @pageIndex, @pageSize";
+                return conn.Query<BlogCategory>(mysql,new { PageIndex=(pageIndex-1)*pageSize,PageSize=pageSize});
             }
         }
         public async Task<IEnumerable<BlogCategory>> GetPagerAsync(int pageIndex, int pageSize)
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                return await conn.QueryAsync<BlogCategory>(@"SELECT top(@PageSize) paged.categoryId,paged.CategoryName FROM (SELECT row_number() over(ORDER BY categoryId) AS [No],* FROM blogcategory ) AS paged WHERE paged.[No]>(@PageIndex-1)*@PageSize", new { PageIndex = pageIndex, PageSize = pageSize });
+                //var sql = @"SELECT top(@PageSize) paged.categoryId,paged.CategoryName FROM (SELECT row_number() over(ORDER BY categoryId) AS [No],* FROM blogcategory ) AS paged WHERE paged.[No]>(@PageIndex-1)*@PageSize";
+                var mysql = @"SELECT * FROM blogcategory order by categoryId LIMIT @pageIndex, @pageSize";
+                return await conn.QueryAsync<BlogCategory>(mysql, new { PageIndex = (pageIndex - 1) * pageSize, PageSize = pageSize });
             }
         }
         public (bool IsAdd, string msg) Add(BlogCategory category)
@@ -88,7 +92,7 @@ namespace RaysBlog.Repository
             {
                 return (false, "categoryName为空或null");
             }
-            if (GetExistCount("select count(*) from blogCategory where categoryName=@caName", new {caName=category.CategoryName })>0)
+            if (GetExistCount("select count(*) from blogcategory where categoryName=@caName", new {caName=category.CategoryName })>0)
             {
                 return (false, "分类已经存在" );
             }
@@ -99,7 +103,7 @@ namespace RaysBlog.Repository
                     var tran = conn.BeginTransaction();
                     try
                     {
-                        var num = conn.Execute("Insert into blogCategory(CategoryName) Values(@caName)", new { caName = category.CategoryName },tran);
+                        var num = conn.Execute("Insert into blogcategory(CategoryName) Values(@caName)", new { caName = category.CategoryName },tran);
                         if (num>0)
                         {
                             tran.Commit();
@@ -129,7 +133,7 @@ namespace RaysBlog.Repository
             {
                 return (false, "categoryName为空或null");
             }
-            if (GetExistCount("select count(*) from blogCategory where categoryName=@caName", new { caName = category.CategoryName }) > 0)
+            if (GetExistCount("select count(*) from blogcategory where categoryName=@caName", new { caName = category.CategoryName }) > 0)
             {
                 return (false,"分类已经存在");
             }
@@ -140,7 +144,7 @@ namespace RaysBlog.Repository
                     var tran = conn.BeginTransaction();
                     try
                     {
-                        var num =await conn.ExecuteAsync("Insert into blogCategory(CategoryName) Values(@caName)", new { caName = category.CategoryName }, tran);
+                        var num =await conn.ExecuteAsync("Insert into blogcategory(CategoryName) Values(@caName)", new { caName = category.CategoryName }, tran);
                         if (num > 0)
                         {
                             tran.Commit();
@@ -170,7 +174,7 @@ namespace RaysBlog.Repository
             {
                 return (false,"categoryName为空或null");
             }
-            if (GetExistCount("select count(*) from blogCategory where categoryName=@caName", new { caName = category.CategoryName }) <= 0)
+            if (GetExistCount("select count(*) from blogcategory where categoryName=@caName", new { caName = category.CategoryName }) <= 0)
             {
                 return (false,"分类不存在");
             }
@@ -181,7 +185,7 @@ namespace RaysBlog.Repository
                     var tran = conn.BeginTransaction();
                     try
                     {
-                        var num = conn.Execute("delete from blogCategory where CategoryId=@caId", new { caId = category.CategoryId }, tran);
+                        var num = conn.Execute("delete from blogcategory where CategoryId=@caId", new { caId = category.CategoryId }, tran);
                         if (num > 0)
                         {
                             tran.Commit();
@@ -211,7 +215,7 @@ namespace RaysBlog.Repository
             {
                 return (false, "categoryName为空或null");
             }
-            if (GetExistCount("select count(*) from blogCategory where categoryName=@caName", new { caName = category.CategoryName }) <= 0)
+            if (GetExistCount("select count(*) from blogcategory where categoryName=@caName", new { caName = category.CategoryName }) <= 0)
             {
                 return (false, "分类不存在");
             }
@@ -222,7 +226,7 @@ namespace RaysBlog.Repository
                     var tran = conn.BeginTransaction();
                     try
                     {
-                        var num =await conn.ExecuteAsync("delete from blogCategory where CategoryId=@caId", new { caId = category.CategoryId }, tran);
+                        var num =await conn.ExecuteAsync("delete from blogcategory where CategoryId=@caId", new { caId = category.CategoryId }, tran);
                         if (num > 0)
                         {
                             tran.Commit();
@@ -252,7 +256,7 @@ namespace RaysBlog.Repository
             {
                 return (false,"categoryName为空或null");
             }
-            if (GetExistCount("select count(*) from blogCategory where categoryId=@caId", new { caId = category.CategoryId }) <= 0)
+            if (GetExistCount("select count(*) from blogcategory where categoryId=@caId", new { caId = category.CategoryId }) <= 0)
             {
                 return (false,"分类不存在");
             }
@@ -260,10 +264,11 @@ namespace RaysBlog.Repository
             {
                 using (var conn = ConnectionFactory.GetOpenConnection())
                 {
+
                     var tran = conn.BeginTransaction();
                     try
                     {
-                        var num = conn.Execute("update blogCategory set categoryName=@caName where CategoryId=@caId", new { caName=category.CategoryName,caId = category.CategoryId }, tran);
+                        var num = conn.Execute("update blogcategory set categoryName=@caName where CategoryId=@caId", new { caName=category.CategoryName,caId = category.CategoryId }, tran);
                         if (num > 0)
                         {
                             tran.Commit();
@@ -293,7 +298,7 @@ namespace RaysBlog.Repository
             {
                 return (false,"categoryName为空或null");
             }
-            if (GetExistCount("select count(*) from blogCategory where categoryId=@caId", new { caId = category.CategoryId }) <= 0)
+            if (GetExistCount("select count(*) from blogcategory where categoryId=@caId", new { caId = category.CategoryId }) <= 0)
             {
                 return (false,"分类不存在");
             }
@@ -304,7 +309,7 @@ namespace RaysBlog.Repository
                     var tran = conn.BeginTransaction();
                     try
                     {
-                        var num =await conn.ExecuteAsync("update blogCategory set categoryName=@caName where CategoryId=@caId", new { caName = category.CategoryName, caId = category.CategoryId }, tran);
+                        var num =await conn.ExecuteAsync("update blogcategory set categoryName=@caName where CategoryId=@caId", new { caName = category.CategoryName, caId = category.CategoryId }, tran);
                         if (num > 0)
                         {
                             tran.Commit();

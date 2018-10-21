@@ -1,0 +1,53 @@
+﻿@model IEnumerable<(int id,string imgPath, string title, string date, string desc)>
+<div class="section" id="section2">
+    <div class="fp-tablecell">
+        <div class="page2">
+            <div class="warp-box">
+                <div class="new-article">
+                    <div class="inner wow fadeInDown" data-wow-delay=".2s">
+                        <h1>热门文章</h1>
+                        <p>
+                            @Model.FirstOrDefault().title
+                        </p>
+                    </div>
+                </div>
+                <div class="layui-row">
+                    @{
+                        var n = 0;
+                        foreach (var art in Model)
+                        {
+
+                            var ns = "." + n.ToString() + "s";
+
+                            <div class="layui-col-xs12 layui-col-sm4 layui-col-md4  wow fadeInUp" data-wow-delay="@ns" style="padding: 0 10px">
+                                <div class="single-news">
+                                    <div class="news-head">
+                                        <img src="@art.imgPath">
+                                        <a href="/strawMan/blog/article/@art.id" class="link"><i class="fa fa-link"></i></a>
+                                    </div>
+                                    <div class="news-content">
+                                        <h4>
+                                            <a href="#">
+                                                @art.title
+                                            </a>
+                                        </h4>
+                                        <div class="date">
+                                            @art.date
+                                        </div>
+                                        <p>
+                                            @Html.Raw(art.desc)
+                                        </p>
+                                        <a href="/strawMan/blog/article/@art.id" class="btn">
+                                            阅读更多
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            n += 2; 
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

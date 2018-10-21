@@ -79,29 +79,32 @@ namespace RaysBlog.Repository
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
+                
                 var result = conn.ExecuteScalar<int>(sql, parameter);
                return result;
             }
         }
         public int GetTotalCount()
         {
-            return GetExistCount("select count(*) from blogArticle where ispublished=1",null);
+            return GetExistCount("select count(*) from blogarticle where ispublished=1",null);
         }
         public int GetMaxId()
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                return conn.ExecuteScalar<int>("select max(articleId) from blogArticle where ispublished=1");
+                
+                return conn.ExecuteScalar<int>("select max(articleId) from blogarticle");
             }
         }
         public BlogArticle Get(int id)
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                string sql = @"SELECT ba.*,bt.*,bc.*
-                                FROM BlogArticle AS ba INNER JOIN BlogTag AS bt ON bt.ArId=ba.ArticleId 
-                                INNER JOIN BlogCategory AS bc ON ba.CaId=bc.CategoryId
-                                WHERE ba.ArticleId=@id AND ba.IsPublished=1";
+                
+                string sql = @"SELECT ba.ArticleId,ba.Body,ba.PostDate,ba.Remark,ba.ArticleName,ba.IsPublished,ba.CaId,ba.TitleImgPath,ba.ViewNum,CommentNum=(select count(*) from blogcomment where ArticleId=@id),bt.*,bc.*
+                    FROM blogarticle AS ba LEFT JOIN blogtag AS bt ON bt.ArId=ba.ArticleId 
+                    INNER JOIN blogcategory AS bc ON ba.CaId=bc.CategoryId
+                    WHERE ba.ArticleId=@id AND ba.IsPublished=1";
                 //var lookup = new Dictionary<int, BlogArticle>();
                var result=  conn.Query<BlogArticle, BlogTag, BlogCategory, BlogArticle>(sql, (ba, bt, bc) =>
                 {
@@ -117,12 +120,17 @@ namespace RaysBlog.Repository
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                string sql = @"SELECT ba.*,bt.*,bc.*
-                                FROM BlogArticle AS ba INNER JOIN BlogTag AS bt ON bt.ArId=ba.ArticleId 
-                                INNER JOIN BlogCategory AS bc ON ba.CaId=bc.CategoryId
-                                WHERE ba.ArticleId=@id AND ba.IsPublished=1";
+                
+                //string sql = @"SELECT ba.ArticleId,ba.Body,ba.PostDate,ba.Remark,ba.ArticleName,ba.IsPublished,ba.CaId,ba.TitleImgPath,ba.ViewNum,CommentNum=(SELECT count(*) FROM BlogComment  WHERE ArticleId=ba.ArticleId ),bt.*,bc.*
+                //    FROM BlogArticle AS ba INNER JOIN BlogTag AS bt ON bt.ArId=ba.ArticleId 
+                //    INNER JOIN BlogCategory AS bc ON ba.CaId=bc.CategoryId
+                //    WHERE ba.ArticleId=@id AND ba.IsPublished=1";
+                string sql = @"SELECT ba.ArticleId,ba.Body,ba.PostDate,ba.Remark,ba.ArticleName,ba.IsPublished,ba.CaId,ba.TitleImgPath,ba.ViewNum,CommentNum=(select count(*) from blogcomment where ArticleId=@id),bt.*,bc.*
+                    FROM blogarticle AS ba LEFT JOIN blogtag AS bt ON bt.ArId=ba.ArticleId 
+                    INNER JOIN blogcategory AS bc ON ba.CaId=bc.CategoryId
+                    WHERE ba.ArticleId=@id AND ba.IsPublished=1";
                 //var lookup = new Dictionary<int, BlogArticle>();
-               var result=  await conn.QueryAsync<BlogArticle, BlogTag, BlogCategory, BlogArticle>(sql, (ba, bt, bc) =>
+                var result=  await conn.QueryAsync<BlogArticle, BlogTag, BlogCategory, BlogArticle>(sql, (ba, bt, bc) =>
                 {
                     ba.Category = bc;
                     //if (!lookup.TryGetValue(ba.ArticleId, out BlogArticle bat))//内联变量
@@ -138,18 +146,24 @@ namespace RaysBlog.Repository
                 return result.AsQueryable().FirstOrDefault();
             }
         }
-        public IEnumerable<BlogArticle> GetPagerByKeywords(int pageIndex, int pageSize, string condition = "")
+        public IEnumerable<BlogArticle> GetPagerByViewNum(int pageIndex, int pageSize)
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                string sql = @"SELECT t1.*,bt.*,bc.*
-                            FROM (SELECT TOP (@PageSize) paged.ArticleId,paged.Body,paged.PostDate,paged.Remark,paged.ArticleName,paged.IsPublished,paged.CaId
-                            FROM (SELECT ROW_NUMBER() OVER (ORDER BY articleId) AS [No],*
-                            FROM BlogArticle WHERE body LIKE '%%') AS Paged WHERE [No] > (@PageIndex - 1) * @PageSize) AS T1
-                            LEFT JOIN Blogtag AS bt ON bt.arId=T1.articleID
-                            LEFT JOIN BlogCategory AS bc ON bc.categoryId =t1.caId";
+                
+                //string sql = @"SELECT t1.*,bt.*,bc.*
+                //                FROM (SELECT TOP (@PageSize) paged.ArticleId,paged.Body,paged.PostDate,paged.Remark,paged.ArticleName,paged.IsPublished,paged.CaId,paged.TitleImgPath,paged.ViewNum,CommentNum=(SELECT count(*) FROM BlogComment  WHERE ArticleId=paged.ArticleId )
+                //                FROM (SELECT TOP  100 PERCENT ROW_NUMBER() OVER (ORDER BY articleId) AS [No],*
+                //                FROM BlogArticle WHERE IsPublished=1  order by ViewNum desc) AS Paged WHERE [No] > (@PageIndex - 1) * @PageSize) AS T1
+                //                LEFT JOIN Blogtag AS bt ON bt.arId=T1.articleID
+                //                LEFT JOIN BlogCategory AS bc ON bc.categoryId =t1.caId";
+                var mysql = @"SELECT T1.*,bt.*,bc.* 
+FROM (SELECT ArticleId, Body, PostDate, Remark, ArticleName, IsPublished,CaId, TitleImgPath, ViewNum, CommentNum=(SELECT COUNT(*) FROM blogcomment  WHERE ArticleId=ArticleId )
+FROM blogarticle  WHERE IsPublished = 1  ORDER BY ViewNum DESC LIMIT @pageIndex, @pageSize) AS T1
+LEFT JOIN blogtag AS bt ON bt.arId = T1.articleID
+INNER JOIN blogcategory AS bc ON bc.categoryId = T1.caId";
                 //var lookup = new Dictionary<int, BlogArticle>();
-                var result = conn.Query<BlogArticle, BlogTag, BlogCategory, BlogArticle>(sql, (ba, bt, bc) =>
+                var result = conn.Query<BlogArticle, BlogTag, BlogCategory, BlogArticle>(mysql, (ba, bt, bc) =>
                 {
                     ba.Category = bc;
 
@@ -162,7 +176,76 @@ namespace RaysBlog.Repository
                     //return bat;
                     ba.Tag = bt;
                     return ba;
-                }, new { PageSize = pageSize, PageIndex = pageIndex, Cond = "%" + condition + "%" }, splitOn: "ArticleId,TagId,CategoryId").AsQueryable();
+                }, new { PageSize = pageSize, PageIndex = pageIndex}, splitOn: "ArticleId,TagId,CategoryId").AsQueryable();
+                //return lookup.Values;
+                return result;
+            }
+        }
+        public async Task<IEnumerable<BlogArticle>> GetPagerByViewNumAsync(int pageIndex, int pageSize)
+        {
+            using (var conn = ConnectionFactory.GetOpenConnection())
+            {
+
+                //string sql = @"SELECT t1.*,bt.*,bc.*
+                //            FROM (SELECT TOP (@PageSize) paged.ArticleId,paged.Body,paged.PostDate,paged.Remark,paged.ArticleName,paged.IsPublished,paged.CaId,paged.TitleImgPath,paged.ViewNum,CommentNum=(SELECT count(*) FROM BlogComment  WHERE ArticleId=paged.ArticleId )
+                //            FROM (SELECT TOP  100 PERCENT ROW_NUMBER() OVER (ORDER BY articleId) AS [No],*
+                //            FROM BlogArticle WHERE IsPublished=1  order by ViewNum desc) AS Paged WHERE [No] > (@PageIndex - 1) * @PageSize) AS T1
+                //            LEFT JOIN Blogtag AS bt ON bt.arId=T1.articleID
+                //            LEFT JOIN BlogCategory AS bc ON bc.categoryId =t1.caId";
+                var mysql = @"SELECT T1.*,bt.*,bc.* 
+FROM (SELECT ArticleId, Body, PostDate, Remark, ArticleName, IsPublished,CaId, TitleImgPath, ViewNum, CommentNum=(SELECT COUNT(*) FROM blogcomment  WHERE ArticleId=ArticleId )
+FROM blogarticle  WHERE IsPublished = 1  ORDER BY ViewNum DESC LIMIT @pageIndex, @pageSize) AS T1
+LEFT JOIN blogtag AS bt ON bt.arId = T1.articleID
+INNER JOIN blogcategory AS bc ON bc.categoryId = T1.caId";
+                //var lookup = new Dictionary<int, BlogArticle>();
+                var result = await conn.QueryAsync<BlogArticle, BlogTag, BlogCategory, BlogArticle>(mysql, (ba, bt, bc) =>
+                {
+                    ba.Category = bc;
+
+                    //if (!lookup.TryGetValue(ba.ArticleId, out BlogArticle bat))
+                    //{
+                    //    lookup.Add(ba.ArticleId, bat = ba);
+                    //}
+                    //ba.Tags = ba.Tags ?? new List<BlogTag>();
+                    //bat.Tags.Add(bt);
+                    //return bat;
+                    ba.Tag = bt;
+                    return ba;
+                }, new { PageSize = pageSize, PageIndex = (pageIndex-1)*pageSize}, splitOn: "ArticleId,TagId,CategoryId");
+                //return lookup.Values;
+                return result.AsQueryable();
+            }
+        }
+        public IEnumerable<BlogArticle> GetPagerByKeywords(int pageIndex, int pageSize, string condition = "")
+        {
+            using (var conn = ConnectionFactory.GetOpenConnection())
+            {              
+                //string sql = @"SELECT t1.*,bt.*,bc.*
+                //                FROM (SELECT TOP (@PageSize) paged.ArticleId,paged.Body,paged.PostDate,paged.Remark,paged.ArticleName,paged.IsPublished,paged.CaId,paged.TitleImgPath,paged.ViewNum,CommentNum=(SELECT count(*) FROM BlogComment  WHERE ArticleId=paged.ArticleId )
+                //                FROM (SELECT TOP  100 PERCENT ROW_NUMBER() OVER (ORDER BY articleId) AS [No],*
+                //                FROM BlogArticle WHERE IsPublished=1 and body LIKE @Cond order by PostDate desc) AS Paged WHERE [No] > (@PageIndex - 1) * @PageSize) AS T1
+                //                LEFT JOIN Blogtag AS bt ON bt.arId=T1.articleID
+                //                LEFT JOIN BlogCategory AS bc ON bc.categoryId =t1.caId";
+                //var lookup = new Dictionary<int, BlogArticle>();
+                var mysql = @"SELECT T1.*,bt.*,bc.* 
+FROM (SELECT ArticleId, Body, PostDate, Remark, ArticleName, IsPublished,CaId, TitleImgPath, ViewNum, CommentNum=(SELECT COUNT(*) FROM blogcomment  WHERE ArticleId=ArticleId )
+FROM blogarticle  WHERE IsPublished = 1   AND body LIKE @Cond ORDER BY PostDate DESC LIMIT @pageIndex, @pageSize) AS T1
+LEFT JOIN blogtag AS bt ON bt.arId = T1.articleID
+INNER JOIN blogcategory AS bc ON bc.categoryId = T1.caId";
+                var result = conn.Query<BlogArticle, BlogTag, BlogCategory, BlogArticle>(mysql, (ba, bt, bc) =>
+                {
+                    ba.Category = bc;
+
+                    //if (!lookup.TryGetValue(ba.ArticleId, out BlogArticle bat))
+                    //{
+                    //    lookup.Add(ba.ArticleId, bat = ba);
+                    //}
+                    //ba.Tags = ba.Tags ?? new List<BlogTag>();
+                    //bat.Tags.Add(bt);
+                    //return bat;
+                    ba.Tag = bt;
+                    return ba;
+                }, new { PageSize = pageSize, PageIndex = (pageIndex-1)*pageSize, Cond = "%" + condition + "%" }, splitOn: "ArticleId,TagId,CategoryId").AsQueryable();
                 //return lookup.Values;
                 return result;
             }
@@ -171,14 +254,20 @@ namespace RaysBlog.Repository
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                string sql = @"SELECT t1.*,bt.*,bc.*
-                            FROM (SELECT TOP (@PageSize) paged.ArticleId,paged.Body,paged.PostDate,paged.Remark,paged.ArticleName,paged.IsPublished,paged.CaId
-                            FROM (SELECT ROW_NUMBER() OVER (ORDER BY articleId) AS [No],*
-                            FROM BlogArticle WHERE body LIKE '%%') AS Paged WHERE [No] > (@PageIndex - 1) * @PageSize) AS T1
-                            LEFT JOIN Blogtag AS bt ON bt.arId=T1.articleID
-                            LEFT JOIN BlogCategory AS bc ON bc.categoryId =t1.caId";
+                
+                //string sql = @"SELECT t1.*,bt.*,bc.*
+                //            FROM (SELECT TOP (@PageSize) paged.ArticleId,paged.Body,paged.PostDate,paged.Remark,paged.ArticleName,paged.IsPublished,paged.CaId,paged.TitleImgPath,paged.ViewNum,CommentNum=(SELECT count(*) FROM BlogComment  WHERE ArticleId=paged.ArticleId )
+                //            FROM (SELECT TOP  100 PERCENT ROW_NUMBER() OVER (ORDER BY articleId) AS [No],*
+                //            FROM BlogArticle WHERE IsPublished=1 and body LIKE @Cond order by PostDate desc) AS Paged WHERE [No] > (@PageIndex - 1) * @PageSize) AS T1
+                //            LEFT JOIN Blogtag AS bt ON bt.arId=T1.articleID
+                //            LEFT JOIN BlogCategory AS bc ON bc.categoryId =t1.caId";
+                var mysql = @"SELECT T1.*,bt.*,bc.* 
+FROM (SELECT ArticleId, Body, PostDate, Remark, ArticleName, IsPublished,CaId, TitleImgPath, ViewNum, CommentNum=(SELECT COUNT(*) FROM blogcomment  WHERE ArticleId=ArticleId )
+FROM blogarticle  WHERE IsPublished = 1   AND body LIKE @Cond ORDER BY PostDate DESC LIMIT @pageIndex, @pageSize) AS T1
+LEFT JOIN blogtag AS bt ON bt.arId = T1.articleID
+INNER JOIN blogcategory AS bc ON bc.categoryId = T1.caId";
                 //var lookup = new Dictionary<int, BlogArticle>();
-                var result =await conn.QueryAsync<BlogArticle, BlogTag, BlogCategory, BlogArticle>(sql, (ba, bt, bc) =>
+                var result =await conn.QueryAsync<BlogArticle, BlogTag, BlogCategory, BlogArticle>(mysql, (ba, bt, bc) =>
                 {
                     ba.Category = bc;
 
@@ -191,7 +280,7 @@ namespace RaysBlog.Repository
                     //return bat;
                     ba.Tag = bt;
                     return ba;
-                }, new { PageSize = pageSize, PageIndex = pageIndex, Cond = "%" + condition + "%" }, splitOn: "ArticleId,TagId,CategoryId");
+                }, new { PageSize = pageSize, PageIndex = (pageIndex-1)*pageSize, Cond = "%" + condition + "%" }, splitOn: "ArticleId,TagId,CategoryId");
                 //return lookup.Values;
                 return result.AsQueryable();
             }
@@ -200,14 +289,20 @@ namespace RaysBlog.Repository
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                string sql = @"SELECT t1.*,bt.*,bc.*
-                            FROM (SELECT TOP (@PageSize) paged.ArticleId,paged.Body,paged.PostDate,paged.Remark,paged.ArticleName,paged.IsPublished,paged.CaId
-                            FROM (SELECT ROW_NUMBER() OVER (ORDER BY articleId) AS [No],*
-                            FROM BlogArticle WHERE articleId in(SELECT arId FROM blogTag WHERE tagName like @TagName)) AS Paged WHERE [No] > (@PageIndex - 1) * @PageSize) AS T1
-                            LEFT JOIN Blogtag AS bt ON bt.arId=T1.articleID
-                            LEFT JOIN BlogCategory AS bc ON bc.categoryId =t1.caId";
+                
+                //string sql = @"SELECT t1.*,bt.*,bc.*
+                //            FROM (SELECT TOP (@PageSize) paged.ArticleId,paged.Body,paged.PostDate,paged.Remark,paged.ArticleName,paged.IsPublished,paged.CaId,paged.TitleImgPath,paged.ViewNum,CommentNum=(SELECT count(*) FROM BlogComment  WHERE ArticleId=paged.ArticleId )
+                //            FROM (SELECT TOP 100 percent ROW_NUMBER() OVER (ORDER BY articleId) AS [No],*
+                //            FROM BlogArticle WHERE IsPublished=1 AND  articleId in(SELECT arId FROM blogTag WHERE tagName like @TagName) ORDER BY PostDate desc) AS Paged WHERE [No] > (@PageIndex - 1) * @PageSize) AS T1 
+                //            LEFT JOIN Blogtag AS bt ON bt.arId=T1.articleID
+                //            LEFT JOIN BlogCategory AS bc ON bc.categoryId =t1.caId";
+                var mysql = @"SELECT T1.*,bt.*,bc.* 
+FROM (SELECT ArticleId, Body, PostDate, Remark, ArticleName, IsPublished,CaId, TitleImgPath, ViewNum, CommentNum=(SELECT COUNT(*) FROM blogcomment  WHERE ArticleId=ArticleId )
+FROM blogarticle  WHERE IsPublished = 1 AND  articleId IN (SELECT arId FROM blogtag WHERE tagName LIKE @TagName) ORDER BY PostDate DESC LIMIT @pageIndex, @pageSize) AS T1
+LEFT JOIN blogtag AS bt ON bt.arId = T1.articleID
+INNER JOIN blogcategory AS bc ON bc.categoryId = T1.caId";
                 //var lookup = new Dictionary<int, BlogArticle>();
-                var result = conn.Query<BlogArticle, BlogTag, BlogCategory, BlogArticle>(sql, (ba, bt, bc) =>
+                var result = conn.Query<BlogArticle, BlogTag, BlogCategory, BlogArticle>(mysql, (ba, bt, bc) =>
                 {
                     ba.Category = bc;
 
@@ -220,7 +315,7 @@ namespace RaysBlog.Repository
                     //return bat;
                     ba.Tag = bt;
                     return ba;
-                }, new { PageSize = pageSize, PageIndex = pageIndex, TagName = $"%{tagName }%" }, splitOn: "ArticleId,TagId,CategoryId");
+                }, new { PageSize = pageSize, PageIndex = (pageIndex - 1) * pageSize, TagName = $"%{tagName }%" }, splitOn: "ArticleId,TagId,CategoryId");
                 //return lookup.Values;
                 return result.AsQueryable();
             }
@@ -229,14 +324,20 @@ namespace RaysBlog.Repository
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                string sql = @"SELECT t1.*,bt.*,bc.*
-                            FROM (SELECT TOP (@PageSize) paged.ArticleId,paged.Body,paged.PostDate,paged.Remark,paged.ArticleName,paged.IsPublished,paged.CaId
-                            FROM (SELECT ROW_NUMBER() OVER (ORDER BY articleId) AS [No],*
-                            FROM BlogArticle WHERE articleId in(SELECT arId FROM blogTag WHERE tagName like @TagName)) AS Paged WHERE [No] > (@PageIndex - 1) * @PageSize) AS T1
-                            LEFT JOIN Blogtag AS bt ON bt.arId=T1.articleID
-                            LEFT JOIN BlogCategory AS bc ON bc.categoryId =t1.caId";
+                
+                //string sql = @"SELECT t1.*,bt.*,bc.*
+                //            FROM (SELECT TOP (@PageSize) paged.ArticleId,paged.Body,paged.PostDate,paged.Remark,paged.ArticleName,paged.IsPublished,paged.CaId,paged.TitleImgPath,paged.ViewNum,CommentNum=(SELECT count(*) FROM BlogComment  WHERE ArticleId=paged.ArticleId )
+                //            FROM (SELECT TOP 100 percent ROW_NUMBER() OVER (ORDER BY articleId) AS [No],*
+                //            FROM BlogArticle WHERE IsPublished=1 AND  articleId in(SELECT arId FROM blogTag WHERE tagName like @TagName) ORDER BY PostDate desc) AS Paged WHERE [No] > (@PageIndex - 1) * @PageSize) AS T1 
+                //            LEFT JOIN Blogtag AS bt ON bt.arId=T1.articleID
+                //            LEFT JOIN BlogCategory AS bc ON bc.categoryId =t1.caId";
+                var mysql = @"SELECT T1.*,bt.*,bc.* 
+FROM (SELECT ArticleId, Body, PostDate, Remark, ArticleName, IsPublished,CaId, TitleImgPath, ViewNum, CommentNum=(SELECT COUNT(*) FROM blogcomment  WHERE ArticleId=ArticleId )
+FROM blogarticle  WHERE IsPublished = 1 AND  articleId IN (SELECT arId FROM blogtag WHERE tagName LIKE @TagName) ORDER BY PostDate DESC LIMIT @pageIndex, @pageSize) AS T1
+LEFT JOIN blogtag AS bt ON bt.arId = T1.articleID
+INNER JOIN blogcategory AS bc ON bc.categoryId = T1.caId";
                 //var lookup = new Dictionary<int, BlogArticle>();
-                var result =await conn.QueryAsync<BlogArticle, BlogTag, BlogCategory, BlogArticle>(sql, (ba, bt, bc) =>
+                var result =await conn.QueryAsync<BlogArticle, BlogTag, BlogCategory, BlogArticle>(mysql, (ba, bt, bc) =>
                 {
                     ba.Category = bc;
 
@@ -249,7 +350,7 @@ namespace RaysBlog.Repository
                     //return bat;
                     ba.Tag = bt;
                     return ba;
-                }, new { PageSize = pageSize, PageIndex = pageIndex, TagName = $"%{tagName }%" }, splitOn: "ArticleId,TagId,CategoryId");
+                }, new { PageSize = pageSize, PageIndex = (pageIndex - 1) * pageSize, TagName = $"%{tagName }%" }, splitOn: "ArticleId,TagId,CategoryId");
                 //return lookup.Values;
                 return result.AsQueryable();
             }
@@ -258,14 +359,20 @@ namespace RaysBlog.Repository
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                string sql = @"SELECT t1.*,bt.*,bc.*
-                            FROM (SELECT TOP (@PageSize) paged.ArticleId,paged.Body,paged.PostDate,paged.Remark,paged.ArticleName,paged.IsPublished,paged.CaId
-                            FROM (SELECT ROW_NUMBER() OVER (ORDER BY articleId) AS [No],*
-                            FROM BlogArticle WHERE CaId = (SELECT CategoryId FROM blogCategory WHERE CategoryName = @CategoryName)) AS Paged WHERE [No] > (@PageIndex - 1) * @PageSize) AS T1
-                            LEFT JOIN Blogtag AS bt ON bt.arId=T1.articleID
-                            LEFT JOIN BlogCategory AS bc ON bc.categoryId =t1.caId";
+                
+                //string sql = @"SELECT t1.*,bt.*,bc.*
+                //            FROM (SELECT TOP (@PageSize) paged.ArticleId,paged.Body,paged.PostDate,paged.Remark,paged.ArticleName,paged.IsPublished,paged.CaId,paged.TitleImgPath,paged.ViewNum,CommentNum=(SELECT count(*) FROM BlogComment  WHERE ArticleId=paged.ArticleId )
+                //            FROM (SELECT top 100 Percent ROW_NUMBER() OVER (ORDER BY articleId) AS [No],*
+                //            FROM BlogArticle WHERE IsPublished=1 and CaId in (SELECT CategoryId FROM blogCategory WHERE CategoryName = @CategoryName) order by postDate desc) AS Paged WHERE [No] > (@PageIndex - 1) * @PageSize) AS T1
+                //            LEFT JOIN Blogtag AS bt ON bt.arId=T1.articleID
+                //            LEFT JOIN BlogCategory AS bc ON bc.categoryId =t1.caId";
+                var mysql = @"SELECT T1.*,bt.*,bc.* 
+FROM (SELECT ArticleId, Body, PostDate, Remark, ArticleName, IsPublished,CaId, TitleImgPath, ViewNum, CommentNum=(SELECT COUNT(*) FROM blogcomment  WHERE ArticleId=ArticleId )
+FROM blogarticle  WHERE IsPublished = 1 AND  CaId IN (SELECT CategoryId FROM blogcategory WHERE CategoryName = @CategoryName) ORDER BY PostDate DESC LIMIT @pageIndex, @pageSize) AS T1
+LEFT JOIN blogtag AS bt ON bt.arId = T1.articleID
+INNER JOIN blogcategory AS bc ON bc.categoryId = T1.caId";
                 //var lookup = new Dictionary<int, BlogArticle>();
-                var result = conn.Query<BlogArticle, BlogTag, BlogCategory, BlogArticle>(sql, (ba, bt, bc) =>
+                var result = conn.Query<BlogArticle, BlogTag, BlogCategory, BlogArticle>(mysql, (ba, bt, bc) =>
                 {
                     ba.Category = bc;
 
@@ -278,7 +385,7 @@ namespace RaysBlog.Repository
                     //return bat;
                     ba.Tag = bt;
                     return ba;
-                }, new { PageSize = pageSize, PageIndex = pageIndex, TagName = categoryName }, splitOn: "ArticleId,TagId,CategoryId");
+                }, new { PageSize = pageSize, PageIndex = (pageIndex - 1) * pageSize, TagName = categoryName }, splitOn: "ArticleId,TagId,CategoryId");
                 //return lookup.Values;
                 return result.AsQueryable();
             }
@@ -287,14 +394,20 @@ namespace RaysBlog.Repository
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                string sql = @"SELECT t1.*,bt.*,bc.*
-                            FROM (SELECT TOP (@PageSize) paged.ArticleId,paged.Body,paged.PostDate,paged.Remark,paged.ArticleName,paged.IsPublished,paged.CaId
-                            FROM (SELECT ROW_NUMBER() OVER (ORDER BY articleId) AS [No],*
-                            FROM BlogArticle WHERE CaId = (SELECT CategoryId FROM blogCategory WHERE CategoryName = @CategoryName)) AS Paged WHERE [No] > (@PageIndex - 1) * @PageSize) AS T1
-                            LEFT JOIN Blogtag AS bt ON bt.arId=T1.articleID
-                            LEFT JOIN BlogCategory AS bc ON bc.categoryId =t1.caId";
+                
+                //string sql = @"SELECT t1.*,bt.*,bc.*
+                //            FROM (SELECT TOP (@PageSize) paged.ArticleId,paged.Body,paged.PostDate,paged.Remark,paged.ArticleName,paged.IsPublished,paged.CaId,paged.TitleImgPath,paged.ViewNum,CommentNum=(SELECT count(*) FROM BlogComment  WHERE ArticleId=paged.ArticleId )
+                //            FROM (SELECT top 100 Percent ROW_NUMBER() OVER (ORDER BY articleId) AS [No],*
+                //            FROM BlogArticle WHERE IsPublished=1 and CaId in (SELECT CategoryId FROM blogCategory WHERE CategoryName = @CategoryName) order by postDate desc) AS Paged WHERE [No] > (@PageIndex - 1) * @PageSize) AS T1
+                //            LEFT JOIN Blogtag AS bt ON bt.arId=T1.articleID
+                //            LEFT JOIN BlogCategory AS bc ON bc.categoryId =t1.caId";
+                var mysql = @"SELECT T1.*,bt.*,bc.* 
+FROM (SELECT ArticleId, Body, PostDate, Remark, ArticleName, IsPublished,CaId, TitleImgPath, ViewNum, CommentNum=(SELECT COUNT(*) FROM blogcomment  WHERE ArticleId=ArticleId )
+FROM blogarticle  WHERE IsPublished = 1 AND  CaId IN (SELECT CategoryId FROM blogcategory WHERE CategoryName = @CategoryName) ORDER BY PostDate DESC LIMIT @pageIndex, @pageSize) AS T1
+LEFT JOIN blogtag AS bt ON bt.arId = T1.articleID
+INNER JOIN blogcategory AS bc ON bc.categoryId = T1.caId";
                 //var lookup = new Dictionary<int, BlogArticle>();
-                var result =await conn.QueryAsync<BlogArticle, BlogTag, BlogCategory, BlogArticle>(sql, (ba, bt, bc) =>
+                var result =await conn.QueryAsync<BlogArticle, BlogTag, BlogCategory, BlogArticle>(mysql, (ba, bt, bc) =>
                 {
                     ba.Category = bc;
 
@@ -307,7 +420,7 @@ namespace RaysBlog.Repository
                     //return bat;
                     ba.Tag = bt;
                     return ba;
-                }, new { PageSize = pageSize, PageIndex = pageIndex, TagName = categoryName }, splitOn: "ArticleId,TagId,CategoryId");
+                }, new { PageSize = pageSize, PageIndex = (pageIndex - 1) * pageSize, TagName = categoryName }, splitOn: "ArticleId,TagId,CategoryId");
                 //return lookup.Values;
                 return result.AsQueryable();
             }
@@ -318,23 +431,25 @@ namespace RaysBlog.Repository
             {
                 return(false, "blogArticle不能为null" );
             }
-            else if (!string.IsNullOrEmpty(blogArticle.ArticleName)&& !string.IsNullOrEmpty(blogArticle.Body) && blogArticle.Category !=null&& (GetExistCount("select count(*) from BlogCategory where categoryId=@caId", new { caId = blogArticle.Category.CategoryId }) > 0))
+            else if (!string.IsNullOrEmpty(blogArticle.ArticleName)&& !string.IsNullOrEmpty(blogArticle.Body) && blogArticle.Category !=null&& (GetExistCount("select count(*) from blogcategory where categoryId=@caId", new { caId = blogArticle.Category.CategoryId }) > 0))
             {
-                var m = GetExistCount("select count(*) from BlogArticle where ArticleName=@artname", new { artname = blogArticle.ArticleName });
-                if (GetExistCount("select count(*) from BlogArticle where ArticleName=@artname", new { artname = blogArticle.ArticleName })>0)
+                var m = GetExistCount("select count(*) from blogarticle where ArticleName=@artname", new { artname = blogArticle.ArticleName });
+                if (GetExistCount("select count(*) from blogarticle where ArticleName=@artname", new { artname = blogArticle.ArticleName })>0)
                 {
                     return (false, "文章标题重复" );
                 }
                 using (var conn=ConnectionFactory.GetOpenConnection())
                 {
+                    
                     var tran = conn.BeginTransaction();
                     try
                     {
-                        var currentId = GetMaxId()+1;
-                        var articleNum= conn.Execute("set IDENTITY_INSERT blogArticle  on;insert into blogArticle(ArticleId,CaId,Body,PostDate,Remark,ArticleName,IsPublished) values(@articleId,@caid,@body,@postDate,@remark,@articleName,@isPublished);set IDENTITY_INSERT blogArticle  off", new {articleId= currentId, caid=blogArticle.Category.CategoryId,body=blogArticle.Body,postDate=blogArticle.PostDate,remark=blogArticle.Remark,articleName=blogArticle.ArticleName,isPublished=blogArticle.IsPublished }, tran);
-                        if (blogArticle.Tag != null&&GetExistCount("select count(*) from BlogTag where TagName like @atnames and ArId=@articleId", new { articleId = blogArticle.ArticleId, atnames = $"%{blogArticle.Tag.TagName}%" })<=0)
+                        //var currentId = GetMaxId()+1;
+                        //&&GetExistCount("select count(*) from blogtag where TagName like @atnames and ArId=@articleId", new { articleId = GetMaxId(), atnames = $"%{blogArticle.Tag.TagName}%" })<=0
+                        var articleNum = conn.Execute("insert into blogarticle(CaId,Body,PostDate,Remark,ArticleName,IsPublished,TitleImgPath) values(@caid,@body,@postDate,@remark,@articleName,@isPublished,@titleImgPath)", new { caid=blogArticle.Category.CategoryId,body=blogArticle.Body,postDate=blogArticle.PostDate,remark=blogArticle.Remark,articleName=blogArticle.ArticleName,isPublished=blogArticle.IsPublished, titleImgPath=blogArticle.TitleImgPath}, tran);
+                        if (blogArticle.Tag != null&&!string.IsNullOrEmpty(blogArticle.Tag.TagName))
                         { 
-                            var tagNum = conn.Execute("insert into blogTag(ArId,TagName) values(@arID,@tagName)", new {arID= currentId, tagName=blogArticle.Tag.TagName }, tran);
+                            var tagNum = conn.Execute("insert into blogtag(ArId,TagName) values(LAST_INSERT_ID(),@tagName)", new {tagName=blogArticle.Tag.TagName }, tran);
                         
                             if (tagNum==0)
                             {
@@ -367,23 +482,24 @@ namespace RaysBlog.Repository
             {
                 return (false, "blogArticle不能为null" );
             }
-            else if (!string.IsNullOrEmpty(blogArticle.ArticleName) && !string.IsNullOrEmpty(blogArticle.Body) && blogArticle.Category != null && (GetExistCount("select count(*) from BlogCategory where categoryId=@caId", new { caId = blogArticle.Category.CategoryId }) > 0))
+            else if (!string.IsNullOrEmpty(blogArticle.ArticleName) && !string.IsNullOrEmpty(blogArticle.Body) && blogArticle.Category != null && (GetExistCount("select count(*) from blogcategory where categoryId=@caId", new { caId = blogArticle.Category.CategoryId }) > 0))
             {
-                var m = GetExistCount("select count(*) from BlogArticle where ArticleName=@artname", new { artname = blogArticle.ArticleName });
-                if (GetExistCount("select count(*) from BlogArticle where ArticleName=@artname", new { artname = blogArticle.ArticleName }) > 0)
+                var m = GetExistCount("select count(*) from blogarticle where ArticleName=@artname", new { artname = blogArticle.ArticleName });
+                if (GetExistCount("select count(*) from blogarticle where ArticleName=@artname", new { artname = blogArticle.ArticleName }) > 0)
                 {
                     return (false,  "文章标题重复" );
                 }
                 using (var conn = ConnectionFactory.GetOpenConnection())
                 {
+                    
                     var tran = conn.BeginTransaction();
                     try
                     {
-                        var currentId = GetMaxId() + 1;
-                        var articleNum =await conn.ExecuteAsync("insert into blogArticle(ArticleId,CaId,Body,PostDate,Remark,ArticleName,IsPublished) values(@articleId,@caid,@body,@postDate,@remark,@articleName,@isPublished)", new { articleId = currentId, caid = blogArticle.Category.CategoryId, body = blogArticle.Body, postDate = blogArticle.PostDate, remark = blogArticle.Remark, articleName = blogArticle.ArticleName, isPublished = blogArticle.IsPublished }, tran);
-                        if (blogArticle.Tag != null && GetExistCount("select count(*) from BlogTag where TagName like @atnames and ArId=@articleId", new { articleId = currentId, atnames = $"%{blogArticle.Tag.TagName}%" }) <= 0)
+                        //var currentId = GetMaxId() + 1;
+                        var articleNum =await conn.ExecuteAsync("insert into blogarticle(CaId,Body,PostDate,Remark,ArticleName,IsPublished,TitleImgPath) values(@caid,@body,@postDate,@remark,@articleName,@isPublished,@titleImgPath)", new { caid = blogArticle.Category.CategoryId, body = blogArticle.Body, postDate = blogArticle.PostDate, remark = blogArticle.Remark, articleName = blogArticle.ArticleName, isPublished = blogArticle.IsPublished, titleImgPath=blogArticle.TitleImgPath }, tran);
+                        if (blogArticle.Tag != null && !string.IsNullOrEmpty(blogArticle.Tag.TagName))
                         {
-                            var tagNum =await conn.ExecuteAsync("insert into blogTag(ArId,TagName) values(@arID,@tagName)", new { arID = blogArticle.ArticleId, tagName = blogArticle.Tag.TagName }, tran);
+                            var tagNum =await conn.ExecuteAsync("insert into blogtag(ArId,TagName) values(LAST_INSERT_ID(),@tagName)", new {tagName = blogArticle.Tag.TagName }, tran);
 
                             if (tagNum == 0)
                             {
@@ -416,7 +532,7 @@ namespace RaysBlog.Repository
             {
                 return (false,"blogArticle不能为null");
             }
-            if (GetExistCount("select count(*) from blogArticle where articleId=@arId",new { arId=blogArticle.ArticleId})==0)
+            if (GetExistCount("select count(*) from blogarticle where articleId=@arId",new { arId=blogArticle.ArticleId})==0)
             {
                 return (false, "异常！不存在的blogArticle");
             }
@@ -424,6 +540,7 @@ namespace RaysBlog.Repository
             {
                 using (var conn=ConnectionFactory.GetOpenConnection())
                 {
+                    
                     var tran = conn.BeginTransaction();
                     var obj = new { IsDelete = false, msg = "删除失败" };
                     try
@@ -432,7 +549,7 @@ namespace RaysBlog.Repository
                         {
                             if (GetExistCount("select count(*) from blogtag where Arid=@arId",new { arId=blogArticle.ArticleId})>0)
                             {
-                               var tgNum= conn.Execute("delete from blogTag where ArId=@artId;",new { artId=blogArticle.ArticleId},tran);
+                               var tgNum= conn.Execute("delete from blogtag where ArId=@artId;",new { artId=blogArticle.ArticleId},tran);
                                 if (tgNum<=0)
                                 {
                                     tran.Rollback();
@@ -451,7 +568,7 @@ namespace RaysBlog.Repository
                             //     tran.Rollback();
                             //     return (false,"删除失败");
                             // }
-                            var result = conn.Execute("delete from blogArticle where articleId=@arId", new { arId = blogArticle.ArticleId }, tran);
+                            var result = conn.Execute("delete from blogarticle where articleId=@arId", new { arId = blogArticle.ArticleId }, tran);
                             if (result>0)
                             {
                                 tran.Commit();
@@ -465,7 +582,7 @@ namespace RaysBlog.Repository
                         }
                         else
                         {
-                            var result = conn.Execute("delete from blogArticle where articleId=@arId", new { arId = blogArticle.ArticleId }, tran);
+                            var result = conn.Execute("delete from blogarticle where articleId=@arId", new { arId = blogArticle.ArticleId }, tran);
                             if (result>0)
                             {
                                 tran.Commit();
@@ -493,7 +610,7 @@ namespace RaysBlog.Repository
             {
                 return (false,  "blogArticle不能为null" );
             }
-            if (GetExistCount("select count(*) from blogArticle where articleId=@arId", new { arId = blogArticle.ArticleId }) == 0)
+            if (GetExistCount("select count(*) from blogarticle where articleId=@arId", new { arId = blogArticle.ArticleId }) == 0)
             {
                 return (false,  "异常！不存在的blogArticle");
             }
@@ -501,6 +618,7 @@ namespace RaysBlog.Repository
             {
                 using (var conn = ConnectionFactory.GetOpenConnection())
                 {
+                    
                     var tran = conn.BeginTransaction();
                     try
                     {
@@ -508,7 +626,7 @@ namespace RaysBlog.Repository
                         {
                             if (GetExistCount("select count(*) from blogtag where Arid=@arId", new { arId = blogArticle.ArticleId }) > 0)
                             {
-                                var tgNum =await conn.ExecuteAsync("delete from blogTag where ArId=@arId;", new { arId = blogArticle.ArticleId });
+                                var tgNum =await conn.ExecuteAsync("delete from blogtag where ArId=@arId;", new { arId = blogArticle.ArticleId });
                                 if (tgNum <= 0)
                                 {
                                     return (true, "标签删除失败，回滚");
@@ -526,7 +644,7 @@ namespace RaysBlog.Repository
                             //    tran.Rollback();
                             //    return (false, "删除失败");
                             //}
-                            var result =await conn.ExecuteAsync("delete from blogArticle where articleId=@arId", new { arId = blogArticle.ArticleId }, tran);
+                            var result =await conn.ExecuteAsync("delete from blogarticle where articleId=@arId", new { arId = blogArticle.ArticleId }, tran);
                             if (result > 0)
                             {
                                 tran.Commit();
@@ -540,7 +658,7 @@ namespace RaysBlog.Repository
                         }
                         else
                         {
-                            var result =await conn.ExecuteAsync("delete from blogArticle where articleId=@arId", new { arId = blogArticle.ArticleId }, tran);
+                            var result =await conn.ExecuteAsync("delete from blogarticle where articleId=@arId", new { arId = blogArticle.ArticleId }, tran);
                             if (result > 0)
                             {
                                 tran.Commit();
@@ -568,7 +686,7 @@ namespace RaysBlog.Repository
             {
                 return (false,  "blogArticle不能为null");
             }
-            if (GetExistCount("select count(*) from blogArticle where articleId=@arId", new { arId = blogArticle.ArticleId }) == 0)
+            if (GetExistCount("select count(*) from blogarticle where articleId=@arId", new { arId = blogArticle.ArticleId }) == 0)
             {
                 return (false,  "异常！不存在的blogArticle" );
             }
@@ -576,10 +694,11 @@ namespace RaysBlog.Repository
             {
                 using (var conn=ConnectionFactory.GetOpenConnection())
                 {
+                    
                     var tran = conn.BeginTransaction();
                     try
                     {
-                        var ArtUpNum = conn.Execute("update blogArticle set articleName=@artName,body=@body,caId=@caId,postDate=@postDate,remark=@remark,ispublished=@ispublished where articleId=@arId", new { artName = blogArticle.ArticleName, body = blogArticle.Body, caId = blogArticle.Category.CategoryId, postDate = blogArticle.PostDate, remark = blogArticle.Remark, ispublished = blogArticle.IsPublished, arId = blogArticle.ArticleId },tran);
+                        var ArtUpNum = conn.Execute("update blogarticle set articleName=@artName,body=@body,caId=@caId,postDate=@postDate,remark=@remark,ispublished=@ispublished,TitleImgPath=@titleImgPath,ViewNum=@viewNum where articleId=@arId", new { artName = blogArticle.ArticleName, body = blogArticle.Body, caId = blogArticle.Category.CategoryId, postDate = blogArticle.PostDate, remark = blogArticle.Remark, ispublished = blogArticle.IsPublished, arId = blogArticle.ArticleId, titleImgPath=blogArticle.TitleImgPath,viewNum=blogArticle.ViewNum },tran);
 
                         var tgUp = CheckTagUpdate();
                         bool CheckTagUpdate()
@@ -590,18 +709,19 @@ namespace RaysBlog.Repository
                             {
                                 if (blogArticle.Tag.TagName.Trim()=="")
                                 {
-                                    TagDelNum= conn.Execute("delete from blogTag where TagId=@tId", new { tId = blogArticle.Tag.TagId }, tran);
+                                    TagDelNum= conn.Execute("delete from blogtag where TagId=@tId", new { tId = blogArticle.Tag.TagId }, tran);
                                 }
                                 else
                                 {
-                                    TagUpNum= conn.Execute("update blogTag set tagName=@tgName where TagId=@tId", new { tgName = blogArticle.Tag.TagName, tId = blogArticle.Tag.TagId }, tran);
+                                    TagUpNum= conn.Execute("update blogtag set tagName=@tgName where TagId=@tId", new { tgName = blogArticle.Tag.TagName, tId = blogArticle.Tag.TagId }, tran);
                                 }
+                                return (TagUpNum > 0 || TagDelNum > 0) ? true : false;
                             }
-                            else
-                            {
-                                TagDelNum= conn.Execute("delete from blogTag where TagId=@tId", new { tId = blogArticle.Tag.TagId }, tran);
-                            }
-                            return (TagUpNum > 0 || TagDelNum > 0) ? true : false;
+                            //else
+                            //{
+                            //    TagDelNum= conn.Execute("delete from blogtag where TagId=@tId", new { tId = blogArticle.Tag.TagId }, tran);
+                            //}
+                            return true;
                         }  //检测Tag是否需要更新
                         if (ArtUpNum > 0 && tgUp)
                         {
@@ -629,7 +749,7 @@ namespace RaysBlog.Repository
             {
                 return (false,  "blogArticle不能为null" );
             }
-            if (GetExistCount("select count(*) from blogArticle where articleId=@arId", new { arId = blogArticle.ArticleId }) == 0)
+            if (GetExistCount("select count(*) from blogarticle where articleId=@arId", new { arId = blogArticle.ArticleId }) == 0)
             {
                 return (false, "异常！不存在的blogArticle");
             }
@@ -637,10 +757,11 @@ namespace RaysBlog.Repository
             {
                 using (var conn = ConnectionFactory.GetOpenConnection())
                 {
+                    
                     var tran = conn.BeginTransaction();
                     try
                     {
-                        var ArtUpNum =await conn.ExecuteAsync("update blogArticle set articleName=@artName,body=@body,caId=@caId,postDate=@postDate,remark=@remark,ispublished=@ispublished where articleId=@arId", new { artName = blogArticle.ArticleName, body = blogArticle.Body, caId = blogArticle.Category.CategoryId, postDate = blogArticle.PostDate, remark = blogArticle.Remark, ispublished = blogArticle.IsPublished, arId = blogArticle.ArticleId }, tran);
+                        var ArtUpNum =await conn.ExecuteAsync("update blogarticle set articleName=@artName,body=@body,caId=@caId,postDate=@postDate,remark=@remark,ispublished=@ispublished,TitleImgPath=@titleImgPath,ViewNum=@viewNum where articleId=@arId", new { artName = blogArticle.ArticleName, body = blogArticle.Body, caId = blogArticle.Category.CategoryId, postDate = blogArticle.PostDate, remark = blogArticle.Remark, ispublished = blogArticle.IsPublished, arId = blogArticle.ArticleId, titleImgPath=blogArticle.TitleImgPath, viewNum = blogArticle.ViewNum }, tran);
 
                         var tgUp =await CheckTagUpdateAsync();
                        async Task<bool> CheckTagUpdateAsync()
@@ -651,18 +772,19 @@ namespace RaysBlog.Repository
                             {
                                 if (blogArticle.Tag.TagName.Trim() == "")
                                 {
-                                    TagDelNum =await conn.ExecuteAsync("delete from blogTag where TagId=@tId", new { tId = blogArticle.Tag.TagId }, tran);
+                                    TagDelNum =await conn.ExecuteAsync("delete from blogtag where TagId=@tId", new { tId = blogArticle.Tag.TagId }, tran);
                                 }
                                 else
                                 {
-                                    TagUpNum =await conn.ExecuteAsync("update blogTag set tagName=@tgName where TagId=@tId", new { tgName = blogArticle.Tag.TagName, tId = blogArticle.Tag.TagId }, tran);
+                                    TagUpNum =await conn.ExecuteAsync("update blogtag set tagName=@tgName where TagId=@tId", new { tgName = blogArticle.Tag.TagName, tId = blogArticle.Tag.TagId }, tran);
                                 }
+                                return (TagUpNum > 0 || TagDelNum > 0) ? true : false;
                             }
-                            else
-                            {
-                                TagDelNum =await conn.ExecuteAsync("delete from blogTag where TagId=@tId", new { tId = blogArticle.Tag.TagId }, tran);
-                            }
-                            return (TagUpNum > 0 || TagDelNum > 0) ? true : false;
+                            //else
+                            //{
+                            //    TagDelNum = await conn.ExecuteAsync("delete from blogtag where TagId=@tId", new { tId = blogArticle.Tag.TagId }, tran);
+                            //}
+                            return true;
                         }  //检测Tag是否需要更新
                         if (ArtUpNum > 0 && tgUp)
                         {

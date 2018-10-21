@@ -1,0 +1,42 @@
+﻿@model IEnumerable<(int id, string imgPath, (string title, string desc, string category, string tag, DateTime postDate, int viewNum, int commentNum) articleDesc)>
+@{
+    foreach (var art in Model)
+    {
+        <section class="article-item zoomIn article">
+            <h5 class="title">
+                <span class="fc-blue">【✔】</span>
+                <a href="/strawMan/blog/article/@art.id">@art.articleDesc.title</a>
+            </h5>
+            <div class="time">
+                <span class="day">@art.articleDesc.postDate.Day</span>
+                <span class="month fs-18">@art.articleDesc.postDate.Month<small class="fs-14">月</small></span>
+                <span class="year fs-18 ml10">@art.articleDesc.postDate.Year</span>
+            </div>
+            <div class="content">
+                <a href="/strawMan/blog/article/@art.id" class="cover img-light">
+                    <img src="@art.imgPath ">
+                </a>
+                @art.articleDesc.desc
+            </div>
+            <div class="read-more">
+                <a href="/strawMan/blog/article/@art.id" class="fc-black f-fwb">继续阅读</a>
+            </div>
+            <aside class="f-oh footer">
+                <div class="f-fl tags">
+                    <span class="fa fa-tags fs-16"></span>
+                    <a class="tag">@art.articleDesc.category</a>
+                </div>
+                <div class="f-fr">
+                    <span class="read">
+                        <i class="fa fa-eye fs-16"></i>
+                        <i class="num">@art.articleDesc.viewNum</i>
+                    </span>
+                    <span class="ml20">
+                        <i class="fa fa-comments fs-16"></i>
+                        <a href="javascript:void(0)" class="num fc-grey">@art.articleDesc.commentNum</a>
+                    </span>
+                </div>
+            </aside>
+        </section>
+    }
+}

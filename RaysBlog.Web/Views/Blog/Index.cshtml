@@ -1,0 +1,84 @@
+﻿@model (IEnumerable<RaysBlog.Model.BlogCategory> cas,IEnumerable<RaysBlog.Model.BlogArticle> ats )
+<div class="doc-container" id="doc-container">
+    <div class="container-fixed">
+        <div class="col-content">
+            <div class="inner">
+                <article class="article-list bloglist" id="LAY_bloglist">
+                    @await Component.InvokeAsync("ArticleSection", new { m = ViewBag.Pz });
+                </article>
+                <div class="layui-flow-more"><a id="artloadM" href="#" style="color:Highlight" onclick="loadMore(@ViewBag.Pz,@ViewBag.TotalRecord)">加载更多</a></div>
+            </div>
+        </div>
+        <div class="col-other">
+            <div class="inner">
+                <div class="other-item" id="categoryandsearch">
+                    <div class="search">
+                        <label class="search-wrap">
+                            <input type="text" id="searchtxt" placeholder="输入关键字搜索" />
+                            <span class="search-icon">
+                                <i class="fa fa-search"></i>
+                            </span>
+                        </label>
+                        <ul class="search-result"></ul>
+                    </div>
+                    <ul class="category mt20" id="category">
+                        <li class="silder"></li>
+                        <li style="text-align:center;" class="slider">全部文章</li>
+                        @{
+                            foreach (var ca in Model.cas)
+                            {
+                                <li ><a href="#">@ca.CategoryName</a></li>
+                            }
+                        }
+                    </ul>
+                </div>
+                <!--右边悬浮 平板或手机设备显示-->
+                <div class="category-toggle"><i class="layui-icon">&#xe603;</i></div>
+                <div class="article-category">
+                    <div class="article-category-title">分类导航</div>
+                    @{
+                        foreach (var ca in Model.cas)
+                        {
+                            <a href="#">@ca.CategoryName</a>
+                        }
+                    }
+                    <div class="f-cb"></div>
+                </div>
+                <!--遮罩-->
+                <div class="blog-mask animated layui-hide"></div>
+                <div class="other-item">
+                    <h5 class="other-item-title">热门文章</h5>
+                    <div class="inner">
+                        <ul class="hot-list-article">
+                            @{
+                                foreach (var art in Model.ats)
+                                {
+                                    <li> <a href="/strawMan/blog/article/@art.ArticleId">@art.ArticleName</a></li>
+                                }
+                            }
+                        </ul>
+                    </div>
+                </div>
+                <div class="other-item">
+                    <h5 class="other-item-title">置顶推荐</h5>
+                    <div class="inner">
+                        <ul class="hot-list-article">
+                            <li> <a href="#">Asp.net core MVC 学习</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="other-item">
+                    <h5 class="other-item-title">最近访客</h5>
+                    <div class="inner">
+                        <dl class="vistor">
+                            <dd></dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+

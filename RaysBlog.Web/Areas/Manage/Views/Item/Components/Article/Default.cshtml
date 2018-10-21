@@ -13,6 +13,9 @@
                 <th>文章分类</th>
                 <th>发表日期</th>
                 <th>是否有效</th>
+                <th>标题图片</th>
+                <th>浏览数</th>
+                <th>评论数</th>
                 <th>文章备注</th>
                 <th style="width:130px;">管理</th>
             </tr>
@@ -23,20 +26,23 @@
                 var tpid = Model.Item4;//页面类型
                 @foreach (var item in @Model.Item1)
                 {
-                    <tr>
-                        <td>@item.ArticleId</td>
-                        <td>@item.ArticleName</td>
-                        <td>@item.Category.CategoryName</td>
-                        <td>@item.PostDate.ToString("yyyy-MM-dd")</td>
-                        <td>@(item.IsPublished?"是":"否")</td>
-                        <td>@item.Remark</td>
-                        <td>
-                            <div class="layui-btn-group">
-                                <a href="javascript:void(0)" class="layui-btn layui-btn-sm" onclick="del({id:@item.ArticleId,tid:@tpid,action:1})"><i class="layui-icon">&#xe642;</i>编辑</a>'
-                                <a href="javascript:void(0)" class="layui-btn layui-btn-danger layui-btn-sm" onclick="del({id:@item.ArticleId,tid:@tpid,action:0})"><i class="layui-icon ">&#xe640;</i>删除</a>'
-                            </div>
-                        </td>
-                    </tr>
+            <tr>
+                <td>@item.ArticleId</td>
+                <td>@item.ArticleName</td>
+                <td>@item.Category.CategoryName</td>
+                <td>@item.PostDate.ToString("yyyy-MM-dd")</td>
+                <td>@(item.IsPublished ? "是" : "否")</td>
+                <td>@item.TitleImgPath</td>
+                <td>@item.ViewNum</td>
+                <td>@item.CommentNum</td>
+                <td>@item.Remark</td>
+                <td>
+                    <div class="layui-btn-group">
+                        <a href="javascript:void(0)" class="layui-btn layui-btn-sm" onclick="del({id:@item.ArticleId,tid:@tpid,action:1})"><i class="layui-icon">&#xe642;</i>编辑</a>'
+                        <a href="javascript:void(0)" class="layui-btn layui-btn-danger layui-btn-sm" onclick="del({id:@item.ArticleId,tid:@tpid,action:0})"><i class="layui-icon ">&#xe640;</i>删除</a>'
+                    </div>
+                </td>
+            </tr>
                 }
             }
         </tbody>

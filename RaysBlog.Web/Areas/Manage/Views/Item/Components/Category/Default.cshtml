@@ -1,4 +1,4 @@
-﻿@model ValueTuple<IEnumerable<RaysBlog.Model.BlogCategory>, int, int,string>
+﻿@model ValueTuple<IEnumerable<RaysBlog.Model.BlogCategory>, int, int, string>
 @{
     Layout = null;
     ViewData["totalCount"] = Model.Item2;
@@ -34,3 +34,4 @@
 </div>
 <input type="hidden" id="pcount" value="@Model.Item2" />
 <input type="hidden" id="psize" value="@Model.Item3" />
+

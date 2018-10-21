@@ -10,10 +10,13 @@ namespace RaysBlog.Test
     {
         static void Main(string[] args)
         {
-            ArticleRepository dal = new ArticleRepository();
+            ArticleRepository adal = new ArticleRepository();
             //var list= dal.GetEntitiesByTag("标签A",1,4).ToList();
             //var s1 =dal.GetAsync(1).Result;
-            var s = dal.Get(1);
+            //UserInfoRepository userDal = new UserInfoRepository();
+            //var s= userDal.Get("oren", "123");
+            //var s1 = userDal.GetUserInfos();
+            //var s = adal.Get(1);
             //var s = dal.GetPagerByKeywords(1, 3);
             //var s2 = dal.GetPagerByTag(1, 3,"标签C");
             //int id = dal.GetMaxId()+1;

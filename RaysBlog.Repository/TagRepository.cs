@@ -34,34 +34,38 @@ namespace RaysBlog.Repository
         }
         public int GetTotalCount()
         {
-            return GetExistCount("select count(*) from BlogTag", null);
+            return GetExistCount("select count(*) from blogtag", null);
         }
         public BlogTag Get(int id)
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                return conn.QueryFirstOrDefault<BlogTag>("select * from BlogTag where TagId=@tgId", new { tgId = id });
+                return conn.QueryFirstOrDefault<BlogTag>("select * from blogtag where TagId=@tgId", new { tgId = id });
             }
         }
         public async Task<BlogTag> GetAsync(int id)
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                return await conn.QueryFirstOrDefaultAsync<BlogTag>("select * from BlogTag where TagId=@tgId", new { tgId = id });
+                return await conn.QueryFirstOrDefaultAsync<BlogTag>("select * from blogtag where TagId=@tgId", new { tgId = id });
             }
         }
-        public IEnumerable<BlogTag> GetPager(int pageIndex, int pageSize)
+        public IEnumerable<BlogTag> GetPager(int pageIndex, int pageSize) 
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                return conn.Query<BlogTag>(@"SELECT top(@PageSize) paged.TagId,paged.ArId,paged.TagName FROM (SELECT row_number() over(ORDER BY TagId) AS [No],* FROM BlogTag ) AS paged WHERE paged.[No]>(@PageIndex-1)*@PageSize", new { PageIndex = pageIndex, PageSize = pageSize });
+                var sql = @"SELECT top(@PageSize) paged.TagId,paged.ArId,paged.TagName FROM (SELECT row_number() over(ORDER BY TagId) AS [No],* FROM BlogTag ) AS paged WHERE paged.[No]>(@PageIndex-1)*@PageSize";
+                var mysql = @"SELECT * FROM blogtag order by tagId LIMIT @pageIndex, @pageSize";
+                return conn.Query<BlogTag>(mysql, new { PageIndex = (pageIndex-1)*pageSize, PageSize = pageSize });
             }
         }
         public async Task<IEnumerable<BlogTag>> GetPagerAsync(int pageIndex, int pageSize)
         {
             using (var conn = ConnectionFactory.GetOpenConnection())
             {
-                return await conn.QueryAsync<BlogTag>(@"SELECT top(@PageSize) paged.TagId,paged.ArId,paged.TagName FROM (SELECT row_number() over(ORDER BY TagId) AS [No],* FROM BlogTag ) AS paged WHERE paged.[No]>(@PageIndex-1)*@PageSize", new { PageIndex = pageIndex, PageSize = pageSize });
+                var sql = @"SELECT top(@PageSize) paged.TagId,paged.ArId,paged.TagName FROM (SELECT row_number() over(ORDER BY TagId) AS [No],* FROM BlogTag ) AS paged WHERE paged.[No]>(@PageIndex-1)*@PageSize";
+                var mysql = @"SELECT * FROM blogtag order by tagId LIMIT @pageIndex, @pageSize";
+                return await conn.QueryAsync<BlogTag>(mysql, new { PageIndex = (pageIndex - 1) * pageSize, PageSize = pageSize });
             }
         }
     }

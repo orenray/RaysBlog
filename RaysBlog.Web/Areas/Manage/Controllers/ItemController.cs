@@ -4,26 +4,30 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using RaysBlog.Repository;
-using RaysBlog.Web.Models.DTO;
 
 namespace RaysBlog.Web.Areas.Manage.Controllers
 {
     [Area("Manage")]
     [Route("Ray/item")]
+    [Authorize(Roles ="admin,system")]
     public class ItemController : Controller
     {
         private readonly CategoryRepository _categoryService;
         private readonly ArticleRepository _articleService;
+        //private readonly UserInfoRepository  _userInfoService;
+        //private readonly PermissionRepository  _permissionService;
         private readonly IHostingEnvironment hostingEnvironment;
-        public ItemController(IHostingEnvironment hostingEnvironment )
+
+        public ItemController(IHostingEnvironment hostingEnvironment)
         {
             this.hostingEnvironment = hostingEnvironment;
             _categoryService= new CategoryRepository();
             _articleService = new ArticleRepository();
+
         }
         public IActionResult Index(string id)
         {
@@ -45,7 +49,10 @@ namespace RaysBlog.Web.Areas.Manage.Controllers
                 case "2":
                     vcName="Article";
                  break;
-	        }
+                case "3":
+                    vcName = "Tag";
+                    break;
+            }
 
             return ViewComponent(vcName, new { id, pageIndex, ascending });
         }
@@ -86,6 +93,7 @@ namespace RaysBlog.Web.Areas.Manage.Controllers
             return PartialView(vcName, partParam);
         }
         [Route("add")]
+        [AutoValidateAntiforgeryToken]
         [HttpPost]
         //[AutoValidateAntiforgeryToken]
         public IActionResult Update()
@@ -155,7 +163,8 @@ namespace RaysBlog.Web.Areas.Manage.Controllers
                     var tagidStr = Request.Form["TagId"].ToString();
                     var body = Request.Form["body"].ToString();
                     var remark = Request.Form["remark"].ToString();
-                    if (!string.IsNullOrEmpty(artName) && !string.IsNullOrEmpty(body) && !string.IsNullOrEmpty(artName))
+                    var TitileImgPath = Request.Form["TitleImgPath"].ToString();
+                    if (!string.IsNullOrEmpty(artName) && !string.IsNullOrEmpty(body) && !string.IsNullOrEmpty(artName)&&!string.IsNullOrEmpty(TitileImgPath))
                     {
                         if (!string.IsNullOrEmpty(action))
                         {
@@ -190,7 +199,8 @@ namespace RaysBlog.Web.Areas.Manage.Controllers
                                     IsPublished = true,
                                     PostDate = DateTime.Now,
                                     Category = _categoryService.Get(caid),
-                                    Tag = tg
+                                    Tag = tg,
+                                    TitleImgPath= TitileImgPath
                                 };
                                 IsSuccess = _articleService.Update(m);
                             }
@@ -204,7 +214,8 @@ namespace RaysBlog.Web.Areas.Manage.Controllers
                                     IsPublished = true,
                                     PostDate = DateTime.Now,
                                     Category = _categoryService.Get(caid),
-                                    Tag = new Model.BlogTag { TagName = tagName }
+                                    Tag = new Model.BlogTag { TagName = tagName },
+                                    TitleImgPath = TitileImgPath
                                 };
                                 IsSuccess = _articleService.Add(m);
                             }
@@ -231,6 +242,7 @@ namespace RaysBlog.Web.Areas.Manage.Controllers
             return Json(obj);
         }
         [Route("del")]
+        [AutoValidateAntiforgeryToken] //CSRF  防跨域请求攻击
         [HttpPost]
         public IActionResult Delete()
         {
@@ -293,14 +305,14 @@ namespace RaysBlog.Web.Areas.Manage.Controllers
             var fileName1 = Guid.NewGuid().ToString().Replace("-", "");
             fileName1 = fileName1 + "_" + fileName;
             string dirDate = DateTime.Now.ToString("yyyyMMdd");
-            string dir1 = hostingEnvironment.WebRootPath + $@"\upload\{dirDate}";
+            string dir1 = hostingEnvironment.WebRootPath + $@"/upload/{dirDate}";
             try
             {
                 if (!System.IO.Directory.Exists(dir1))
                 {
                     System.IO.Directory.CreateDirectory(dir1);
                 }
-                fileName = dir1 + $@"\{fileName1}";//上传后的文件全路径
+                fileName = dir1 + $@"/{fileName1}";//上传后的文件全路径
                 using (var fs = System.IO.File.Create(fileName))
                 {
                     imgFile.CopyTo(fs);
@@ -310,7 +322,7 @@ namespace RaysBlog.Web.Areas.Manage.Controllers
                 {
                     code = 0,
                     msg = "上传成功",
-                    data = new { src = $"/upload/{dirDate}/{fileName1}", title = "图片标题" }
+                    data = new { src = $"/upload/{dirDate}/{fileName1}", title = "#" }
                 };
                 return Json(result);
             }
@@ -326,5 +338,54 @@ namespace RaysBlog.Web.Areas.Manage.Controllers
             }           
             
         }
+        [HttpPost]
+        [Route("titleImgUp")]
+        public IActionResult UpLoadForTitle()
+        {
+            var imgFile = Request.Form.Files[0];
+            if (imgFile == null || string.IsNullOrEmpty(imgFile.FileName)) return Json(new { code = 1, msg = "上传失败", });
+            long size = imgFile.Length;
+            var fileName = imgFile.FileName;//文件名
+            var extName = fileName.Substring(fileName.LastIndexOf("."), fileName.Length - fileName.LastIndexOf("."));//扩展名
+            var fileName1 = Guid.NewGuid().ToString().Replace("-", "");
+            fileName1 = fileName1 + "_" + fileName;
+            string dirDate = DateTime.Now.ToString("yyyyMMdd");
+            string dir1 = hostingEnvironment.WebRootPath + $@"/uploadTitle/{dirDate}";//--》"/"linux写法
+            //System.IO.DirectoryInfo root = new System.IO.DirectoryInfo(hostingEnvironment.WebRootPath);
+            try
+            {
+                if (!System.IO.Directory.Exists(dir1))
+                {
+                    System.IO.Directory.CreateDirectory(dir1);     
+                    //directory.CreateSubdirectory(dirDate);
+                }
+                fileName = dir1 + $@"/{fileName1}";//上传后的文件全路径
+                using (var fs = System.IO.File.Create(fileName))
+                {
+                    imgFile.CopyTo(fs);
+                    fs.Flush();
+                }
+                TitileImgPath = $"/uploadTitle/{dirDate}/{fileName1}";
+                var result = new
+                {
+                    code = 0,
+                    msg = "上传成功",
+                    data = new { src = $"/uploadTitle/{dirDate}/{fileName1}", title = "#" }
+                };
+                return Json(result);
+            }
+            catch (Exception)
+            {
+                var result = new
+                {
+                    code = -1,
+                    msg = "上传失败",
+                    data = new { src = $"/upload/error.gif", title = "错误" }
+                };
+                return Json(result);
+            }
+
+        }
+        private static string TitileImgPath=string.Empty;
     }
 }

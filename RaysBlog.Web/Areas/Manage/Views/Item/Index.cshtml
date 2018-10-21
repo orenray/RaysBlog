@@ -9,12 +9,14 @@
         <div class="layui-col-xs10 layui-col-md10">
             <div class="layui-card">
                 <div class="layui-card-header">
-                    <div class="layui-input-inline">
-                        @*~/Admin/Article/Add*@
-                        <a href="javascript:void(0)" onclick="add(@ViewBag.TypeId,0,-1)" class="layui-btn layui-btn-sm">
-                            <i class="layui-icon">&#xe654;</i>添加
-                        </a>
-                    </div>
+                    @if (ViewBag.TypeId == "1" || ViewBag.TypeId == "2")
+                    {
+                        <div class="layui-input-inline">
+                            <a href="javascript:void(0)" onclick="add(@ViewBag.TypeId,0,-1)" class="layui-btn layui-btn-sm">
+                                <i class="layui-icon">&#xe654;</i>添加
+                            </a>
+                        </div>
+                    }
                     @if (ViewBag.TypeId == "2")
                     {
                         <div class="layui-input-inline">
@@ -31,6 +33,17 @@
                         </div>
                         <div class="layui-input-inline">
                             <input type="text" id="search_end" placeholder="yyyy-MM-dd" class="layui-input" onclick="pickDate('#search_end')" />
+                        </div>
+                        <div class="layui-input-inline">
+                            <button class="layui-btn layui-btn-sm" onclick="search()">
+                                <i class="layui-icon">&#xe615;</i>查询
+                            </button>
+                        </div>
+                    }
+                    @if (ViewBag.TypeId == "3")
+                    {
+                        <div class="layui-input-inline">
+                            <input type="text" id="search_key" placeholder="标题关键字" class="layui-input" />
                         </div>
                         <div class="layui-input-inline">
                             <button class="layui-btn layui-btn-sm" onclick="search()">
@@ -61,6 +74,7 @@
                                 break;
                         }
                         @await Component.InvokeAsync(viewName, new { id = ViewBag.TypeId, pageIndex = ViewBag.PageIndex, ascending = true })
+                        @Html.AntiForgeryToken()
                     }
                     <div id="pager">
                         <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;"></fieldset>
@@ -109,7 +123,6 @@
                     layer.msg("点击了第" + pageIndex + "页")
                     loadPageData(pageIndex, @ViewBag.TypeId);
                 }
-                //loadPageData(pageIndex);
             }
         });
     });
@@ -169,26 +182,34 @@
         layui.use('layer', function () {
             var layer = layui.layer;
             var $ = layui.jquery;
+            var token = $("input[name='__RequestVerificationToken']").val(); @* CSRF *@
             if (action == 0) {
                 layer.confirm("是否确认删除？", {
                     btn: ['yes', 'no']@* yes or no 询问按钮 *@
                 }, function () {
                     var url = "/ray/item/del"; @* post请求url *@
-                    $.post(url, { id: id, typeId: tid }, function (data) {
-                    @* function (data)请求成功后的回调函数  data后台回调的数据 *@
-                        if (data.code == 2 || data.code == 1) {
-                            if (!data.msg || data.msg == "") {
-                                layer.msg(retData.msg, { icon: 5 });
+                    $.ajax({
+                        type: "post",
+                        dataType: "json",
+                        url: url,
+                        data: { id: id, typeId: tid},
+                        headers: { "RequestVerificationToken": token},
+                        success: function (result) {
+                            if (result.code == 2 || result.code == 1) {
+                                if (!result.msg || result.msg == "") {
+                                    layer.msg(result.msg, { icon: 5 });
+                                }
                             }
-                        }
-                        if (data.code == 0) {
-                            layer.msg(data.msg, {
-                                icon: 1,
-                                time: 500
-                            }, function () {
-                                self.location.reload(true);
-                            });
-                        }
+                            if (result.code == 0) {
+                                layer.msg(result.msg, {
+                                    icon: 1,
+                                    time: 500
+                                }, function () {
+                                    self.location.reload(true);
+                                });
+                            }
+                        },
+                        error: function (jqXHR,err,ex) { }
                     });
                 }, function () { });
             }
@@ -224,7 +245,6 @@
             layer.open({
                 type: 2,
                 offset: 'auto',
-                //content: '<div style="padding:20px 100px;">' + '<form class="layui-form"action=""><div class="layui-card"><div class="layui-card-header">添加</div><div class="layui-card-body"><form class="layui-form"action=""><div class="layui-row"><div class="layui-form-item"><label class="layui-form-label">分类标题</label><div class="layui-input-block"><input type="text"name="title"required lay-verify="required"placeholder="请输入标题"autocomplete="off"class="layui-input"></div></div><div class="layui-form-item"><label class="layui-form-label">密码框</label><div class="layui-input-inline"><input type="password"name="password"required lay-verify="required"placeholder="请输入密码"autocomplete="off"class="layui-input"></div><div class="layui-form-mid layui-word-aux">辅助文字</div></div><div class="layui-form-item layui-form-text"><label class="layui-form-label">文本域</label><div class="layui-input-block"><textarea name="desc"placeholder="请输入内容"class="layui-textarea"></textarea></div></div><div class="layui-form-item"><div class="layui-input-block"><button class="layui-btn"lay-submit lay-filter="formDemo">立即提交</button><button type="reset"class="layui-btn layui-btn-primary">重置</button></div></div></div></form>' + '</div>',
                 content: "/ray/item/update?typeId=" + typeId + "&actionstr=" + action + "&mid=" + id,
                 btnAlign: 'c',
                 shade: [0.8, '#393D49'],

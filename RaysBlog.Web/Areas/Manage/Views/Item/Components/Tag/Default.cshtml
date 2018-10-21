@@ -1,0 +1,34 @@
+﻿@model ValueTuple<IEnumerable<RaysBlog.Model.BlogTag>, int, int, string>
+@{
+    Layout = null;
+    ViewData["totalCount"] = Model.Item2;
+    ViewData["pageSize"] = Model.Item3;
+}
+<div id="ttab">
+    <table class="layui-table">
+        <thead>
+            <tr>
+                <th>标签ID</th>
+                <th>标签ID</th>
+                <th>标签标题</th>
+            </tr>
+        </thead>
+        <tbody id="tbody1">
+            @if (Model.Item1 != null || Model.Item1.Count() > 0)
+            {
+                var tpid = Model.Item4;//页面类型
+                @foreach (var item in @Model.Item1)
+                {
+                    <tr>
+                        <td>@item.TagId</td>
+                        <td>@item.ArId</td>
+                        <td>@item.TagName</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+<input type="hidden" id="pcount" value="@Model.Item2" />
+<input type="hidden" id="psize" value="@Model.Item3" />
+
